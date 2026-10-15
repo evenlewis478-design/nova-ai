@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gun Model Viewer</title>
+<style>
+:root{--bg:#e9ebee;--bg2:#cfd3d9;--fg:#1b1e23;--panel:#f6f7f8;--bd:#b9bec6;--side:#dfe2e6;--ok:#2f9e5a;--no:#d0442f;--wn:#c98a14;--ac:#e0742a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#2a2d33;--bg2:#121316;--fg:#e8eaed;--panel:#1e2025;--bd:#454a53;--side:#191b1f;--ok:#4cc380;--no:#ef6a52;--wn:#e2a93a}}
+:root[data-theme="dark"]{--bg:#2a2d33;--bg2:#121316;--fg:#e8eaed;--panel:#1e2025;--bd:#454a53;--side:#191b1f;--ok:#4cc380;--no:#ef6a52;--wn:#e2a93a}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg2);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden}
+#app{display:flex;height:100%;position:relative}
+#side{width:290px;flex:none;background:var(--side);border-right:1px solid var(--bd);display:flex;flex-direction:column;transition:margin-left .25s;z-index:20}
+#side.closed{margin-left:-291px}
+#side h2{margin:0;padding:14px 14px 6px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}
+#list{flex:1;overflow-y:auto;padding:6px 8px 14px}
+.pk{margin-bottom:10px;border:1px solid var(--bd);border-radius:10px;background:var(--panel);overflow:hidden}
+.ph{display:flex;align-items:center;gap:6px;padding:8px 10px;font-size:14px;font-weight:600}
+.ph span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ph small{font-weight:400;opacity:.6}
+.x{border:0;background:none;color:var(--fg);opacity:.5;font-size:18px;padding:0 4px;cursor:pointer}
+.g{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:14px;cursor:pointer;border-top:1px solid var(--bd)}
+.g:hover{background:var(--bg)}.g.act{background:var(--bg);box-shadow:inset 3px 0 var(--ac)}
+.g span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--bd);flex:none}
+.dot.ready{background:var(--ok)}.dot.bad{background:var(--no)}
+#main{flex:1;min-width:0;display:flex;flex-direction:column}
+#top{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--side);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+#st{font-size:13px;opacity:.7;flex:1;min-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+button,label.b{background:var(--panel);color:var(--fg);border:1px solid var(--bd);border-radius:10px;padding:9px 13px;font-size:14px;cursor:pointer;font-family:inherit}
+label.b{display:inline-block}
+button.on,.tab.on{outline:2px solid var(--ac)}
+.pri{background:var(--ac);color:#fff;border-color:var(--ac);font-weight:600}
+input[type=file]{display:none}
+#stage{flex:1;position:relative;min-height:0;background:radial-gradient(circle at 50% 40%,var(--bg),var(--bg2))}
+#c{position:absolute;left:0;top:0;width:100%;height:calc(100% - var(--pb,0px));display:block;touch-action:none}
+#bar{position:absolute;left:0;right:0;bottom:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 10px}
+.ov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px}
+#empty .box{border:2px dashed var(--bd);border-radius:16px;padding:36px 26px;max-width:420px;background:var(--bg2)}
+#empty.hv .box{border-color:var(--ac)}
+#empty h1{margin:0 0 8px;font-size:22px}#empty p{margin:6px 0;opacity:.75;font-size:15px}
+#chk{align-items:flex-start;justify-content:center;overflow-y:auto;background:var(--bg2);z-index:3}
+.card{width:100%;max-width:640px;text-align:left}
+.stamp{display:inline-block;border:4px solid;border-radius:6px;padding:4px 18px;font-size:34px;font-weight:900;letter-spacing:.06em;transform:rotate(-2deg);margin:6px 0 10px}
+.stamp.ready{color:var(--ok)}.stamp.bad{color:var(--no)}
+.row{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--bd);font-size:14px;align-items:flex-start}
+.m{flex:none;width:22px;height:22px;border-radius:50%;color:#fff;font-weight:700;text-align:center;line-height:22px;font-size:13px}
+.m.ok{background:var(--ok)}.m.warn{background:var(--wn)}.m.fail{background:var(--no)}
+.row b{display:block}.row i{font-style:normal;opacity:.75;font-size:13px}
+#ld{background:#15171a;color:#d7dbe0;z-index:9;font-family:ui-monospace,Menlo,Consolas,monospace}
+#ld .in{width:min(420px,90%);text-align:left}
+#ld .t{font-size:12px;letter-spacing:.14em;color:#8b929b;margin-bottom:6px}
+#ld .n{font-size:18px;margin-bottom:18px;word-break:break-all}
+#ld .bar{height:6px;background:#2b2f35}#ld .bar div{height:100%;width:0;background:#e0742a;transition:width .2s}
+#ld .s{margin-top:12px;font-size:13px;color:#aab0b8;min-height:18px}
+.pnl{position:absolute;left:10px;right:10px;bottom:10px;max-width:760px;margin:0 auto;background:var(--panel);border:1px solid var(--bd);border-radius:14px;padding:10px;z-index:4;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.r1{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}.r1 b{margin-left:auto;font-variant-numeric:tabular-nums}
+.sl{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px 12px;font-size:13px}.sl label{display:flex;flex-direction:column;gap:2px}.sl output{float:right;opacity:.7}
+.hint{font-size:12px;opacity:.65;margin-top:4px}
+select,textarea{background:var(--bg);color:var(--fg);border:1px solid var(--bd);border-radius:8px;padding:7px;font-family:inherit;font-size:14px}
+#aip{display:flex;flex-direction:column;max-height:62%}#alog{flex:1;overflow-y:auto;min-height:60px;display:flex;flex-direction:column;gap:6px;padding:2px}
+.msg{padding:8px 11px;border-radius:12px;font-size:14px;max-width:92%;line-height:1.35}.msg.me{align-self:flex-end;background:var(--ac);color:#fff}.msg.ai{align-self:flex-start;background:var(--bg)}.msg ul{margin:6px 0 0;padding-left:18px;font-size:13px;opacity:.85}
+#abusy{display:flex;align-items:center;gap:5px;font-size:14px;padding:6px 2px;font-weight:600}#abusy i{width:7px;height:7px;border-radius:50%;background:var(--ac);animation:pl 1s infinite}#abusy i:nth-child(2){animation-delay:.15s}#abusy i:nth-child(3){animation-delay:.3s}#abusy span{margin-left:6px}
+@keyframes pl{0%,100%{opacity:.25}50%{opacity:1}}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px}.chips button{padding:6px 10px;font-size:13px;border-radius:16px}.chips span{opacity:.65}
+#ain{flex:1;min-width:160px;resize:none}
+#scope{position:absolute;left:0;right:0;top:0;bottom:var(--pb,0px);pointer-events:none;opacity:0;z-index:2}.aim .sl,.aim .hint{display:none}
+#scope::before,#scope::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.sc-ring::before{width:min(44vmin,240px);aspect-ratio:1;border:3px solid #ff3b3b;border-radius:50%;box-shadow:0 0 14px #ff3b3b99,inset 0 0 14px #ff3b3b66}
+.sc-ring::after,.sc-dot::after{width:8px;height:8px;border-radius:50%;background:#ff3b3b;box-shadow:0 0 10px #ff3b3b}
+.sc-cross::before{width:min(40vmin,220px);height:2px;background:#4dff88}.sc-cross::after{width:2px;height:min(40vmin,220px);background:#4dff88}
+.sc-sniper{background:radial-gradient(circle at 50% 50%,transparent 0,transparent 31vmin,#000 31.6vmin)}.sc-sniper::before{width:62vmin;height:1px;background:#000}.sc-sniper::after{width:1px;height:62vmin;background:#000}
+.hide{display:none!important}
+@media(max-width:700px){#side{position:absolute;top:0;bottom:0;box-shadow:4px 0 18px rgba(0,0,0,.35)}}
+#edp{padding:4px 12px 10px;border-bottom:1px solid var(--bd);overflow-y:auto;max-height:60%}
+#edp.hide{display:none}
+#edb.on{outline:2px solid var(--ac)}
+.kr{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0;font-size:14px}
+.kr button{padding:6px 10px;min-width:120px}.kr button.on{outline:2px solid var(--ac)}
+.eh{font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.7;margin:12px 0 4px}
+#dvp{padding:4px 12px 10px;border-bottom:1px solid var(--bd);overflow-y:auto;max-height:60%}
+#dvp.hide{display:none}
+#dvb.on{outline:2px solid var(--ac)}
+.dvpre{font-size:12px;white-space:pre-wrap;max-height:140px;overflow:auto;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:6px;margin:6px 0}
+textarea{width:100%;background:var(--panel);color:var(--fg);border:1px solid var(--bd);border-radius:8px;padding:8px;font:inherit;font-size:13px}
+#ver{position:fixed;top:10px;right:12px;z-index:60;font-size:12px;font-weight:600;opacity:.7;padding:3px 9px;border:1px solid var(--bd);border-radius:8px;background:var(--panel);pointer-events:none}
+#bgwrap{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+#bgwrap>*{width:100%;height:100%;object-fit:cover;display:block}
+#app{z-index:1}
+body.hasbg{background:transparent}
+body.hasbg #stage{background:transparent}
+.nb{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:6px;background:var(--ac);color:#fff;margin-left:4px}
+.mdcard{border:1px solid var(--bd);border-radius:10px;padding:8px;margin:8px 0;background:var(--panel)}
+.mdcard textarea{margin:4px 0}
+#maker{position:fixed;inset:0;z-index:80;background:var(--bg2);overflow:auto;padding:18px;box-sizing:border-box}
+#maker.hide{display:none}
+.mk{display:grid;grid-template-columns:280px 1fr;gap:18px;max-width:1200px;margin:0 auto}
+@media(max-width:800px){.mk{grid-template-columns:1fr}}
+#maker input[type=text],#maker input:not([type]),#maker select{width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--panel);color:var(--fg);font:inherit;margin:4px 0;box-sizing:border-box}
+#maker textarea{width:100%;box-sizing:border-box;margin:4px 0}
+.mkb{display:block;width:100%;text-align:left;margin:4px 0}
+.mkb.on{outline:2px solid var(--ac)}
+.vidpick{display:block;text-align:center;font-size:13px;padding:6px;margin:0 0 8px}
+.seg{position:relative;padding:4px;border-radius:12px;background:var(--bg2);border:1px solid var(--bd);margin:0 0 8px}
+.seg .thumb{position:absolute;top:4px;bottom:4px;left:4px;border-radius:9px;background:var(--ac);box-shadow:0 1px 4px rgba(0,0,0,.2);pointer-events:none;transition:transform .3s ease,width .3s ease}
+#mdSel{display:grid;position:relative;z-index:1}
+#mdSel button{background:transparent;border:0;box-shadow:none;padding:9px 6px;font-size:14px;font-weight:600;color:var(--fg);cursor:pointer;border-radius:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#mdSel button.on{color:#fff}
+#aiSide{position:relative;padding:8px 12px 12px;border-top:1px solid var(--bd)}
+#aiPick{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
+#aiPick .chev{opacity:.7}
+#aiMenu{position:absolute;left:12px;right:12px;bottom:100%;margin-bottom:6px;background:var(--panel);border:1px solid var(--bd);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.25);padding:6px;z-index:30;display:flex;flex-direction:column;gap:4px}
+.aiOpt{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;padding:9px 10px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer}
+.aiOpt.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.aiOpt .inuse{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+</style></head><body><div id="ver">Nova Core · v2.6.8</div><div id="bgwrap"></div><div id="maker" class="hide"></div>
+<div id="app">
+<aside id="side">
+ <div style="padding:12px 12px 0"><label class="b pri" style="width:100%;text-align:center">Choose file<input type="file" id="f" multiple></label></div>
+ <div style="padding:8px 12px 0;display:flex;gap:8px"><button id="edb" style="flex:1">✎ Edit</button><button id="dvb" style="flex:1">⚙ Developer</button></div><div id="dvp" class="hide"></div><div style="padding:8px 12px 0"><button id="amb" style="width:100%">🧠 AI Maker</button></div><div id="edp" class="hide"></div><h2>Your guns</h2><div id="list"></div><div id="aiSide" class="hide"><button id="aiPick"><span id="aiPickName"></span><span class="chev">▾</span></button><div id="aiMenu" class="hide"></div></div>
+</aside>
+<main id="main">
+ <div id="top"><button id="tg">☰ Library</button><button class="tab on" data-t="view">View</button><button class="tab" data-t="check">Shooter check</button><button class="tab" data-t="anim">Animate</button><button class="tab" data-t="ai">AI Studio</button><span id="st"></span></div>
+ <div id="stage">
+  <canvas id="c"></canvas>
+  <div id="bar" class="hide"><button data-v="side">Side</button><button data-v="top">Top</button><button data-v="front">Front</button><button data-v="angle">3/4</button><button id="spin">Auto-spin</button><button id="wire">Wireframe</button></div>
+  <div id="empty" class="ov"><div class="box"><h1>Gun Model Viewer</h1><p>Drop a .zip here, or tap Choose file. Works with .obj, .fbx and .glb, and zips with several guns in them.</p><p>Everything you add is saved on this device.</p><p id="err" style="color:var(--no)"></p></div></div>
+  <div id="chk" class="ov hide"></div>
+  <div id="scope" class="sc-ring"></div>
+  <div id="anp" class="pnl hide"></div>
+  <div id="aip" class="pnl hide"><div id="alog"></div><div id="abusy" class="hide"><i></i><i></i><i></i><span id="abt">Making new feature…</span></div><div class="chips" id="chips"></div><div class="chips" id="skins"></div>
+   <div class="r1"><textarea id="ain" rows="2" placeholder="Tell the AI what you want. Example: make it a Halloween gun with a scope"></textarea><button id="asend" class="pri">Send</button></div>
+   <div class="r1"><button id="aund">Undo</button><button id="arst">Reset</button><button id="achk">Check now</button><button id="asave">Save as new gun</button><button id="adl">Download .glb</button></div></div>
+  <div id="ld" class="ov hide"><div class="in"><div class="t">SHOOTER CHECK</div><div class="n" id="ldn"></div><div class="bar"><div id="ldb"></div></div><div class="s" id="lds"></div></div></div>
+ </div>
+</main></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/fflate.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const VERSION='2.6.8',ERRS=[];
+const logErr=m=>{ERRS.push(new Date().toLocaleTimeString()+' '+m);if(ERRS.length>50)ERRS.shift();const b=document.getElementById('devErr');if(b)b.textContent=ERRS.slice(-8).join('\n')};
+addEventListener('error',e=>logErr('Error: '+(e.message||'unknown')+(e.lineno?' (line '+e.lineno+')':'')));
+addEventListener('unhandledrejection',e=>logErr('Promise: '+((e.reason&&e.reason.message)||e.reason)));
+const $=id=>document.getElementById(id),sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const base=n=>n.split(/[\\/]/).pop().toLowerCase(), nice=n=>n.split(/[\\/]/).pop();
+const ext=n=>((n.match(/\.([a-z0-9]+)$/i)||[])[1]||'').toLowerCase();
+const dataURL=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)});
+const loadImg=u=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=u});
+// ---------- 3D scene ----------
+const cv=$('c'),stage=$('stage');
+const r=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+r.setPixelRatio(Math.min(devicePixelRatio,2));r.outputEncoding=THREE.sRGBEncoding;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.1;
+const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(35,1,0.01,5000);
+const ctl=new THREE.OrbitControls(cam,cv);ctl.enableDamping=true;ctl.autoRotateSpeed=2;
+const env=new THREE.Scene();env.add(new THREE.Mesh(new THREE.SphereGeometry(50,32,16),new THREE.MeshBasicMaterial({color:0x56606c,side:THREE.BackSide})));
+[[0,40,0,30,2,30,6],[40,10,20,2,20,30,3],[-40,10,-10,2,20,30,3],[0,-30,0,40,2,40,1.2]].forEach(a=>{const m=new THREE.Mesh(new THREE.BoxGeometry(a[3],a[4],a[5]),new THREE.MeshBasicMaterial({color:new THREE.Color(a[6],a[6],a[6])}));m.position.set(a[0],a[1],a[2]);env.add(m)});
+scene.environment=new THREE.PMREMGenerator(r).fromScene(env,0.02).texture;
+scene.add(new THREE.HemisphereLight(0xffffff,0x555566,0.5));
+const dl=new THREE.DirectionalLight(0xffffff,0.8);dl.position.set(30,50,40);scene.add(dl);
+function rs(){const w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return;r.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+new ResizeObserver(rs).observe(stage);
+let rigReady=false;const camoU={uTime:{value:0}};
+(function loop(){requestAnimationFrame(loop);camoU.uTime.value=performance.now()/1000;try{if(rigReady)tick()}catch(e){console.error(e)}if(ctl.enabled)ctl.update();r.render(scene,cam)})();
+// ---------- library + storage ----------
+let ATT={},ATTS={},lib=[],db=null,sel=null,cur=null,shown='',R=1,L='z',wireOn=false,mats=[],tab='view';
+function idb(){return new Promise(res=>{try{const q=indexedDB.open('gunviewer',2);q.onupgradeneeded=()=>{const d=q.result;if(!d.objectStoreNames.contains('pkgs'))d.createObjectStore('pkgs',{keyPath:'id'});if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv')};q.onsuccess=()=>res(q.result);q.onerror=()=>res(null)}catch(e){res(null)}})}
+const put=e=>new Promise(res=>{if(!db)return res(false);try{const t=db.transaction('pkgs','readwrite');t.objectStore('pkgs').put({id:e.id,name:e.name,added:e.added,checks:e.checks,files:e.files.map(f=>({n:f.name,b:f}))});t.oncomplete=()=>res(true);t.onerror=t.onabort=()=>res(false)}catch(x){res(false)}});
+const del=id=>new Promise(res=>{if(!db)return res();try{const t=db.transaction('pkgs','readwrite');t.objectStore('pkgs').delete(id);t.oncomplete=t.onerror=()=>res()}catch(x){res()}});
+const MODEL=/^(glb|gltf|fbx|obj)$/,ORDER='glb gltf fbx obj';
+const modelsOf=e=>{const seen=new Set();return e.files.filter(f=>MODEL.test(ext(f.name))).sort((a,b)=>ORDER.indexOf(ext(a.name))-ORDER.indexOf(ext(b.name))).filter(f=>{const k=f.name.toLowerCase().replace(/\.[a-z0-9]+$/,'');if(seen.has(k))return false;seen.add(k);return true})};
+async function gather(list,out){
+  for(const f of list){
+    if(ext(f.name)==='zip'){const z=await JSZip.loadAsync(f);
+      for(const k of Object.keys(z.files)){const en=z.files[k];if(en.dir||k.includes('__MACOSX'))continue;await gather([new File([await en.async('blob')],k)],out)}}
+    else out.push(f);
+  }
+}
+async function addFiles(list){
+  list=Array.from(list);
+  $('err').textContent='';$('st').textContent='Unpacking…';
+  try{
+    const files=[];await gather(Array.from(list),files);
+    const e={id:Date.now()+'-'+Math.random().toString(36).slice(2,6),name:nice(list[0].name),added:Date.now(),files,checks:{}};
+    if(!modelsOf(e).length)throw new Error('No .obj, .fbx or .glb model found inside ('+files.length+' file(s) looked at).');
+    lib.push(e);const ok=await put(e);
+    renderLib();await pick(e.id,nice(modelsOf(e)[0].name));setTab('view');if(mq.matches)$('side').classList.add('closed');
+    if(!ok)$('st').textContent='Added, but this browser would not save it for next time.';
+  }catch(x){console.error(x);$('err').textContent='Could not load: '+x.message;$('st').textContent='';}
+}
+function renderLib(){
+  const l=$('list');l.innerHTML='';
+  lib.forEach(e=>{
+    const d=document.createElement('div');d.className='pk';const ms=modelsOf(e);
+    d.innerHTML='<div class="ph"><span>'+esc(e.name)+'</span><small>'+ms.length+' gun'+(ms.length>1?'s':'')+'</small><button class="x" title="Remove">×</button></div>';
+    d.querySelector('.x').onclick=async()=>{if(!confirm('Remove "'+e.name+'" from your library?'))return;lib=lib.filter(z=>z!==e);await del(e.id);if(sel&&sel.eid===e.id){sel=null;clearModel()}renderLib();if(!sel&&lib.length)pick(lib[0].id,nice(modelsOf(lib[0])[0].name));updateEmpty()};
+    ms.forEach(m=>{const n=nice(m.name),c=e.checks[n],g=document.createElement('div');
+      g.className='g'+(sel&&sel.eid===e.id&&sel.mn===n?' act':'');
+      g.innerHTML='<i class="dot '+(c?(c.verdict==='READY'?'ready':'bad'):'')+'"></i><span>'+esc(n)+'</span>';
+      g.onclick=()=>{pick(e.id,n);if(innerWidth<=700)$('side').classList.add('closed')};d.appendChild(g)});
+    l.appendChild(d);
+  });
+}
+function updateEmpty(){$('empty').classList.toggle('hide',lib.length>0);$('bar').classList.toggle('hide',!(lib.length&&tab==='view'));$('anp').classList.toggle('hide',tab!=='anim'||!sel);$('aip').classList.toggle('hide',tab!=='ai'||!sel);$('aiSide').classList.toggle('hide',tab!=='ai'||!sel);$('edp').classList.toggle('hide',tab!=='edit'||!sel)}
+const entry=()=>lib.find(e=>e.id===sel.eid),mfile=()=>modelsOf(entry()).find(m=>nice(m.name)===sel.mn);
+async function pick(eid,mn){if(!sel||sel.eid!==eid||sel.mn!==mn){opsLog=[];aiHist=[];$('alog').innerHTML=''}ATT=ATTS[eid+'|'+mn]||(ATTS[eid+'|'+mn]={});sel={eid,mn};renderLib();updateEmpty();if(tab==='check')renderCheck();else await showModel()}
+function setTab(t){tab=t;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  $('chk').classList.toggle('hide',t!=='check'||!sel);$('bar').classList.toggle('hide',t!=='view'||!lib.length);
+  $('anp').classList.toggle('hide',t!=='anim'||!sel);$('aip').classList.toggle('hide',t!=='ai'||!sel);$('aiSide').classList.toggle('hide',t!=='ai'||!sel);$('edp').classList.toggle('hide',t!=='edit'||!sel);$('edb').classList.toggle('on',t==='edit');
+  if(t!=='anim'){aimOff();holdFire=false}
+  if(t==='ai'&&!$('alog').children.length)greet();
+  if(t==='check')renderCheck();else if(sel&&shown!==sel.eid+'|'+sel.mn)showModel();rs()}
+// ---------- loading models ----------
+function kind(n){n=n.toLowerCase();
+  if(/normal|nrm|_n\.|_nor/.test(n))return'normal';if(/(^|[^a-z])ao([^a-z]|$)|occlusion/.test(n))return'ao';
+  if(/metal/.test(n))return'metal';if(/rough|gloss/.test(n))return'rough';
+  if(/albedo|basecolor|base_color|diffuse|color|colour|_d\.|_c\.|_col/.test(n))return'albedo';return null}
+async function buildSets(files){
+  const raw={};
+  for(const f of files){if(!/^(png|jpe?g|webp|bmp)$/.test(ext(f.name)))continue;const b=base(f.name),k=kind(b);if(!k)continue;
+    const key=b.replace(/\.[a-z]+$/,'').replace(/(albedo|basecolor|base_color|diffuse|color|colour|normal|nrm|metallic|metalness|metal|roughness|rough|gloss|occlusion|ao)/g,'').replace(/[_\-\s.]+/g,'');
+    (raw[key]=raw[key]||{})[k]=f}
+  const out={};
+  for(const key in raw){const o={dim:{}};
+    for(const k in raw[key]){const img=await loadImg(await dataURL(raw[key][k]));if(!img)continue;
+      const t=new THREE.Texture(img);t.needsUpdate=true;t.anisotropy=8;if(k==='albedo')t.encoding=THREE.sRGBEncoding;o[k]=t;o.dim[k]=[img.naturalWidth,img.naturalHeight]}
+    out[key]=o}
+  return out}
+const mkMat=s=>{const m=new THREE.MeshStandardMaterial({map:s.albedo||null,normalMap:s.normal||null,aoMap:s.ao||null,roughnessMap:s.rough||null,metalnessMap:s.metal||null,roughness:s.rough?1:.55,metalness:s.metal?1:.6});if(!s.albedo)m.color.set(0x8a8f96);return m};
+function pickSet(sets,name){const ks=Object.keys(sets);if(!ks.length)return null;const n=(name||'').toLowerCase().replace(/[_\-\s.]+/g,'');return sets[ks.find(k=>k&&n.includes(k))||ks[0]]}
+const dir=n=>n.replace(/\\/g,'/').split('/').slice(0,-1).join('/').toLowerCase();
+function texFor(e,f){
+  const all=e.files.filter(x=>/^(png|jpe?g|webp|bmp)$/.test(ext(x.name))),md=dir(f.name);
+  const near=all.filter(x=>{const d=dir(x.name);return d===md||d.startsWith(md+'/')||md.startsWith(d+'/')||d===''});
+  return near.length?near:(modelsOf(e).length===1?all:[])}
+async function loadModel(e,f){
+  const e0=ext(f.name),urlMap={},tf=texFor(e,f);
+  for(const x of tf)urlMap[base(x.name)]=await dataURL(x);
+  const mgr=new THREE.LoadingManager();mgr.setURLModifier(u=>urlMap[decodeURIComponent(u.split(/[\\/]/).pop().split('?')[0]).toLowerCase()]||u);
+  const sets=await buildSets(tf);let obj;
+  if(e0==='obj')obj=new THREE.OBJLoader(mgr).parse(await f.text());
+  else if(e0==='fbx'){const buf=await f.arrayBuffer(),w=console.warn;console.warn=()=>{};try{obj=new THREE.FBXLoader(mgr).parse(buf,'')}finally{console.warn=w}}
+  else{const buf=e0==='gltf'?await f.text():await f.arrayBuffer();obj=await new Promise((ok,no)=>new THREE.GLTFLoader(mgr).parse(buf,'',g=>{g.scene.userData.anims=g.animations;ok(g.scene)},no))}
+  obj.traverse(o=>{if(!o.isMesh)return;const arr=[].concat(o.material||[]);
+    if((e0==='obj'||arr.every(m=>!m.map))&&Object.keys(sets).length)o.material=arr.length>1?arr.map(m=>mkMat(pickSet(sets,m.name||o.name))):mkMat(pickSet(sets,(arr[0]&&arr[0].name)||o.name));
+    else if(e0==='obj')o.material=mkMat({});
+    const uv=o.geometry.attributes.uv;if(uv&&!o.geometry.attributes.uv2)o.geometry.setAttribute('uv2',uv)});
+  return{obj,sets,e0}}
+function clearModel(){if(cur){scene.remove(cur);cur=null}shown='';$('st').textContent=''}
+async function showModel(){
+  if(!sel)return;const mine=sel,key=sel.eid+'|'+sel.mn;$('st').textContent='Loading…';
+  try{const{obj}=await loadModel(entry(),mfile());if(mine!==sel)return;
+    mats=[];obj.traverse(o=>{if(o.isMesh)[].concat(o.material).forEach(m=>{m.wireframe=wireOn;mats.push(m)})});
+    clearModel();const box=new THREE.Box3().setFromObject(obj),c=box.getCenter(new THREE.Vector3()),sz=box.getSize(new THREE.Vector3());
+    obj.position.sub(c);cur=new THREE.Group();cur.add(obj);scene.add(cur);
+    R=Math.max(sz.x,sz.y,sz.z)||1;ctl.minDistance=R*.2;ctl.maxDistance=R*6;L=['x','y','z'].sort((a,b)=>sz[b]-sz[a])[0];
+    setupGun(obj);if(camoK)applyCamo(camoK);rebuildAtt();renderAtt();setupClips(obj);shown=key;view('side');$('st').textContent=sel.mn;
+  }catch(x){console.error(x);$('st').textContent='Could not show this model: '+x.message}}
+function view(k){const v={side:L==='x'?[0,0,1]:[1,0,0],top:[0,1,.001],front:L==='z'?[0,0,1]:L==='x'?[1,0,0]:[0,0,1],angle:[.8,.45,.9]}[k];
+  const c=(G&&G.ctr)||new THREE.Vector3();cam.position.copy(new THREE.Vector3(...v).normalize().multiplyScalar(R*1.9*Math.max(1,1.15/cam.aspect)).add(c));ctl.target.copy(c);ctl.update()}
+// ---------- shooter check ----------
+function analyze(obj,sets,e0){
+  const it=[],add=(s,t,d)=>it.push({s,t,d});
+  let meshes=0,tris=0,bad=0,degen=0,noUV=0,uvOut=0,uvTot=0,flip=0,flipTot=0,dup=0,dupTot=0,noN=0;const names=[],ms=new Set();
+  obj.updateMatrixWorld(true);
+  const box=new THREE.Box3().setFromObject(obj),sz=box.getSize(new THREE.Vector3()),ctr=box.getCenter(new THREE.Vector3());
+  const a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),n=new THREE.Vector3(),e1=new THREE.Vector3(),e2=new THREE.Vector3(),vn=new THREE.Vector3();
+  const total=(()=>{let t=0;obj.traverse(o=>{if(o.isMesh){const g=o.geometry;t+=g.index?g.index.count/3:g.attributes.position.count/3}});return t})();
+  const doDup=total<=150000,rd=v=>Math.round(v.x*1000)+','+Math.round(v.y*1000)+','+Math.round(v.z*1000),seen=new Set();
+  obj.traverse(o=>{if(!o.isMesh)return;meshes++;names.push((o.name||'')+' '+(o.parent&&o.parent.name||''));
+    [].concat(o.material).forEach(m=>ms.add(m));
+    const g=o.geometry,pos=g.attributes.position,idx=g.index,nrm=g.attributes.normal,uv=g.attributes.uv,tc=idx?idx.count/3:pos.count/3;tris+=tc;
+    if(!uv)noUV++;else for(let i=0;i<uv.count;i++){uvTot++;const u=uv.getX(i),v=uv.getY(i);if(u<-.001||u>1.001||v<-.001||v>1.001)uvOut++}
+    if(!nrm)noN++;
+    for(let t=0;t<tc;t++){const i0=idx?idx.getX(t*3):t*3,i1=idx?idx.getX(t*3+1):t*3+1,i2=idx?idx.getX(t*3+2):t*3+2;
+      a.fromBufferAttribute(pos,i0);b.fromBufferAttribute(pos,i1);c.fromBufferAttribute(pos,i2);
+      e1.subVectors(b,a);e2.subVectors(c,a);n.crossVectors(e1,e2);const ar=n.length();
+      if(!isFinite(ar)){bad++;continue}
+      if(ar<1e-10){degen++;continue}
+      if(nrm){n.divideScalar(ar);vn.fromBufferAttribute(nrm,i0).add(new THREE.Vector3().fromBufferAttribute(nrm,i1)).add(new THREE.Vector3().fromBufferAttribute(nrm,i2));if(vn.dot(n)<0)flip++;flipTot++}
+      if(doDup){const k=[rd(a),rd(b),rd(c)].sort().join('|');dupTot++;if(seen.has(k))dup++;else seen.add(k)}}});
+  tris=Math.round(tris);const pct=(x,y)=>y?x/y*100:0;
+  if(!meshes)add('fail','Model has geometry','Nothing to draw: the file has no meshes.');
+  else add('ok','Model has geometry',meshes+' mesh part'+(meshes>1?'s':'')+', '+tris.toLocaleString()+' triangles.');
+  if(bad)add('fail','Broken points (NaN)',bad+' triangles have invalid coordinates and will vanish or crash the importer.');
+  else add('ok','No broken points','All vertex positions are valid numbers.');
+  if(tris>100000)add('fail','Too heavy for a held weapon',tris.toLocaleString()+' triangles. Aim for under about 50,000 for a first person gun.');
+  else if(tris>50000)add('warn','Quite heavy',tris.toLocaleString()+' triangles. Fine for one gun, but consider trimming for lower-end devices.');
+  else add('ok','Polygon count is fine',tris.toLocaleString()+' triangles.');
+  const dp=pct(degen,tris);
+  if(dp>5)add('fail','Zero-area faces',degen.toLocaleString()+' flat triangles ('+dp.toFixed(1)+'%). These cause black spots and lighting glitches.');
+  else if(degen)add('warn','A few zero-area faces',degen+' flat triangles. Minor, but worth cleaning up.');
+  else add('ok','No zero-area faces','Every triangle has real surface area.');
+  if(doDup){const q=pct(dup,dupTot);
+    if(q>1)add('fail','Overlapping duplicate faces',dup.toLocaleString()+' faces sit exactly on top of another face ('+q.toFixed(1)+'%). They flicker (z-fighting) in game.');
+    else if(dup)add('warn','A few overlapping faces',dup+' faces are doubled up. Usually harmless but can flicker.');
+    else add('ok','No overlapping faces','No doubled-up surfaces found.')}
+  if(noN&&!flipTot)add('warn','No saved normals','Lighting will be recalculated on import and may look faceted.');
+  else if(flipTot){const q=pct(flip,flipTot);
+    if(q>50)add('fail','Inside-out faces','Most surfaces ('+q.toFixed(0)+'%) face inward, so the gun will look hollow or dark.');
+    else if(q>5)add('warn','Some flipped faces',q.toFixed(1)+'% of faces point the wrong way and may show see-through patches.');
+    else add('ok','Faces point outward','Normals agree with the surface.')}
+  if(noUV)add('fail','Missing UV map',noUV+' mesh part(s) have no UVs, so textures cannot be applied.');
+  else if(uvTot&&pct(uvOut,uvTot)>5)add('warn','UVs reach outside the 0 to 1 square',pct(uvOut,uvTot).toFixed(0)+'% of UV points. Fine if tiling is on purpose, otherwise textures may repeat.');
+  else add('ok','UV map is clean','All parts have UVs inside the texture area.');
+  // textures
+  let hasA=false,hasN=false,maxD=0,npot=false,tex=0;
+  Object.values(sets).forEach(s=>{if(s.albedo)hasA=true;if(s.normal)hasN=true;Object.values(s.dim).forEach(d=>{tex++;maxD=Math.max(maxD,d[0],d[1]);if((d[0]&(d[0]-1))||(d[1]&(d[1]-1)))npot=true})});
+  ms.forEach(m=>{if(m.userData&&m.userData.flat)hasA=true;if(m.map){hasA=true;const i=m.map.image;if(i&&i.width){maxD=Math.max(maxD,i.width,i.height)}}if(m.normalMap)hasN=true});
+  if(!hasA)add('fail','No color texture','No base color/albedo image found with this model, so it would render untextured.');
+  else add('ok','Color texture found',tex?tex+' texture image(s) matched.':'Textures are built into the file.');
+  if(!hasN)add('warn','No normal map','Surface detail will look flat up close.');
+  if(maxD>=4096)add('warn','Very large textures',maxD+' px maps. On a gun that is close to the camera, 2048 px looks the same and loads faster.');
+  if(npot)add('warn','Texture sizes are not powers of two','Some maps are not 512, 1024, 2048… which can cause problems or wasted memory on some devices.');
+  if(ms.size>6)add('warn','Many materials',ms.size+' materials means more draw calls. Try to merge into 1 to 3.');
+  // scale + pivot
+  const Lg=Math.max(sz.x,sz.y,sz.z);
+  if(!(Lg>0))add('fail','Model has no size','The bounding box is empty.');
+  else{
+    if(Lg>=.2&&Lg<=1.6)add('ok','Scale looks right',Lg.toFixed(2)+' long, which matches real meters.');
+    else if(Lg>=20&&Lg<=160)add('warn','Probably centimeters',Lg.toFixed(1)+' units long. Import at 0.01 scale (or scale in your engine) so it is gun-sized.');
+    else add('warn','Unusual size',Lg.toFixed(3)+' units long. Check the unit scale before importing.');
+    const off=ctr.length()/Lg;
+    if(off>.3)add('warn','Pivot is far from the gun','The origin sits well away from the model. Move the pivot to the grip so it attaches to the hands correctly.');
+    else add('ok','Pivot is near the model','Origin is close to the gun.')}
+  // parts
+  const j=names.join(' ').toLowerCase(),hasMag=/mag/.test(j),hasBolt=/bolt|slide|charging|carrier/.test(j);
+  if(meshes>1&&hasMag&&hasBolt)add('ok','Moving parts are separate','Magazine and bolt/slide are their own parts, so reload and fire animations are possible.');
+  else add('warn','Moving parts not split out',(meshes>1?'Could not find a separate magazine and bolt/slide by name.':'The whole gun is one mesh.')+' Reload and slide animations need those parts separated.');
+  return it}
+async function checkOne(e,m,onStage){
+  const n=nice(m.name),st=['Loading model','Counting polygons','Looking for broken faces','Checking overlaps and normals','Checking UVs and textures','Checking scale and parts'];
+  let res;
+  try{onStage(st[0],0);const{obj,sets,e0}=await loadModel(e,m);
+    for(let i=1;i<st.length;i++){onStage(st[i],i/st.length);await sleep(220)}
+    res=analyze(obj,sets,e0);
+  }catch(x){res=[{s:'fail',t:'Model failed to load',d:String(x.message||x)}]}
+  const fails=res.filter(i=>i.s==='fail').length,warns=res.filter(i=>i.s==='warn').length;
+  e.checks[n]={verdict:fails?'NOT READY':'READY',items:res,fails,warns,at:Date.now()};
+  onStage('Done',1);await sleep(250)}
+async function runChecks(e,models){
+  $('ld').classList.remove('hide');
+  for(let i=0;i<models.length;i++){const n=nice(models[i].name);
+    $('ldn').textContent=(models.length>1?'Gun '+(i+1)+' of '+models.length+': ':'')+n;
+    await checkOne(e,models[i],(s,p)=>{$('lds').textContent=s==='Done'?'Done':s+'…';$('ldb').style.width=((i+p)/models.length*100)+'%'})}
+  $('ldb').style.width='100%';await sleep(200);$('ld').classList.add('hide');await put(e);renderLib();renderCheck()}
+function renderCheck(){
+  const p=$('chk');if(!sel){p.classList.add('hide');return}p.classList.toggle('hide',tab!=='check');
+  const e=entry(),ms=modelsOf(e),c=e.checks[sel.mn];
+  let h='<div class="card"><div style="font-size:13px;opacity:.7">'+esc(e.name)+'</div><h2 style="margin:2px 0 10px;font-size:20px;word-break:break-all">'+esc(sel.mn)+'</h2>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="pri" id="r1">'+(c?'Check again':'Check this gun')+'</button>'+(ms.length>1?'<button id="rall">Check all '+ms.length+' guns in this pack</button>':'')+'</div>';
+  if(c){h+='<div class="stamp '+(c.verdict==='READY'?'ready':'bad')+'">'+c.verdict+'</div>';
+    h+='<div style="font-size:14px;margin-bottom:6px">'+(c.fails?c.fails+' problem'+(c.fails>1?'s':'')+' to fix':'No bugs found')+(c.warns?' · '+c.warns+' tip'+(c.warns>1?'s':''):'')+'</div>';
+    const ord={fail:0,warn:1,ok:2};c.items.slice().sort((a,b)=>ord[a.s]-ord[b.s]).forEach(i=>{h+='<div class="row"><span class="m '+i.s+'">'+(i.s==='ok'?'✓':i.s==='warn'?'!':'✕')+'</span><div><b>'+esc(i.t)+'</b><i>'+esc(i.d)+'</i></div></div>'});
+    h+='<p style="font-size:12px;opacity:.6;margin-top:14px">This checks the model file itself: geometry, faces, UVs, textures, scale and parts. It cannot test animations or how it behaves inside your game engine.</p>'}
+  else h+='<p style="opacity:.75;font-size:15px">Not checked yet. Run a check to see if this gun is ready for a first person shooter.</p>';
+  if(ms.length>1){h+='<div style="margin-top:14px;font-size:13px;opacity:.7">Pack results</div>';
+    ms.forEach(m=>{const n=nice(m.name),k=e.checks[n];h+='<div class="row" style="cursor:pointer;align-items:center" data-g="'+esc(n)+'"><i class="dot '+(k?(k.verdict==='READY'?'ready':'bad'):'')+'" style="opacity:1"></i><b style="flex:1;font-weight:500">'+esc(n)+'</b><i>'+(k?k.verdict:'not checked')+'</i></div>'})}
+  p.innerHTML=h+'</div>';
+  $('r1').onclick=()=>runChecks(e,[mfile()]);if($('rall'))$('rall').onclick=()=>runChecks(e,ms);
+  p.querySelectorAll('[data-g]').forEach(d=>d.onclick=()=>pick(e.id,d.dataset.g))}
+// ---------- gun rig, animation, effects, AI studio ----------
+let G=null,ammo=30,rec=0,rt=-1,ads=0,wantAds=false,holdFire=false,nextShot=0,flashT=0,coneOff=0,lastT=performance.now(),camSave=null,opsLog=[],aiHist=[],busy=false,fxs=[];
+const P={rpm:600,recoil:1,mag:30,reload:2.2,fov:22,scope:'ring'};
+const V3=(x,y,z)=>new THREE.Vector3(x,y,z),AXV={x:V3(1,0,0),y:V3(0,1,0),z:V3(0,0,1)};
+const fxg=new THREE.Group();scene.add(fxg);
+const fl=new THREE.PointLight(0xffa640,0,0);scene.add(fl);
+const cone=new THREE.Mesh(new THREE.ConeGeometry(.5,1.6,10),new THREE.MeshBasicMaterial({color:0xffb347,transparent:true,opacity:.9,blending:THREE.AdditiveBlending,depthWrite:false}));cone.visible=false;scene.add(cone);
+const lin=c=>new THREE.Color(c).convertSRGBToLinear();
+const pname=o=>((o.name||'')+' '+(o.parent&&o.parent.name||'')).toLowerCase();
+const eachMesh=f=>G.obj.traverse(o=>o.isMesh&&f(o));
+const both=f=>{f(G.obj);f(G.add)};
+function refreshMats(){mats=[];eachMesh(m=>[].concat(m.material).forEach(x=>{x.wireframe=wireOn;mats.push(x)}))}
+function recenter(){cur.position.set(0,0,0);cur.updateMatrixWorld(true);const c=new THREE.Box3().setFromObject(cur).getCenter(V3(0,0,0));both(x=>x.position.sub(c))}
+function setAim(){const b=G.box,c=G.ctr,h=b.max[G.up]-G.sz[G.up]*.05-c[G.up];
+  G.sight=c.clone().addScaledVector(G.dir,-G.len*.52).addScaledVector(G.upv,h);G.look=G.sight.clone().addScaledVector(G.dir,G.len*3);G.side=G.dir.clone().cross(G.upv)}
+function setupGun(obj,keep){
+  if(G)G.base.forEach((p,o)=>o.position.copy(p));
+  cur.position.set(0,0,0);cur.quaternion.identity();cur.updateMatrixWorld(true);
+  const box=new THREE.Box3().setFromObject(obj),sz=box.getSize(V3(0,0,0)),ctr=box.getCenter(V3(0,0,0));
+  R=Math.max(sz.x,sz.y,sz.z)||1;ctl.minDistance=R*.2;ctl.maxDistance=R*6;
+  L=['x','y','z'].sort((a,b)=>sz[b]-sz[a])[0];
+  const ax=L,up=ax==='y'?'z':'y',len=sz[ax],o2=['x','y','z'].filter(a=>a!==ax),p=V3(0,0,0);
+  const ex=[0,1].map(()=>({mn:[1e9,1e9],mx:[-1e9,-1e9]})),mz=[V3(0,0,0),V3(0,0,0)],mc=[0,0];
+  obj.traverse(m=>{if(!m.isMesh)return;const a=m.geometry.attributes.position,st=Math.max(1,Math.floor(a.count/8000));
+    for(let i=0;i<a.count;i+=st){p.fromBufferAttribute(a,i).applyMatrix4(m.matrixWorld);const t=p[ax]-ctr[ax],s=t>len*.38?1:t<-len*.38?0:-1;if(s<0)continue;
+      const E=ex[s];o2.forEach((k,j)=>{E.mn[j]=Math.min(E.mn[j],p[k]);E.mx[j]=Math.max(E.mx[j],p[k])});
+      if(Math.abs(t)>len*.46){mz[s].add(p);mc[s]++}}});
+  const ar=ex.map(E=>(E.mx[0]-E.mn[0])*(E.mx[1]-E.mn[1])),me=ar[1]<=ar[0]?1:0;
+  const ends=mz.map((v,i)=>mc[i]?v.clone().divideScalar(mc[i]):ctr.clone().addScaledVector(AXV[ax],(i?1:-1)*len/2));
+  const add=cur.getObjectByName('adds')||(()=>{const g=new THREE.Group();g.name='adds';cur.add(g);return g})();
+  G={obj,add,ax,up,len,sz,box,ctr,ends,me,dir:AXV[ax].clone().multiplyScalar(me?1:-1),upv:AXV[up].clone(),muzzle:ends[me],bolt:[],mag:[],base:new Map(),inv:new Map()};
+  obj.traverse(o=>{if(!o.isMesh)return;const n=pname(o);if(/bolt|slide|charging|carrier/.test(n))G.bolt.push(o);else if(/mag|clip|bullet|ammo/.test(n))G.mag.push(o)});
+  [...G.bolt,...G.mag].forEach(o=>{G.base.set(o,o.position.clone());G.inv.set(o,new THREE.Matrix3().setFromMatrix4(o.parent.matrixWorld).invert())});
+  setAim();ammo=P.mag;rec=0;rt=-1;updHud();refreshMats();if(!keep)view('side')}
+const loc=(o,w)=>w.clone().applyMatrix3(G.inv.get(o));
+function updHud(){const a=$('ammo');if(a)a.textContent=(rt>=0?'Reloading… ':'')+ammo+' / '+P.mag}
+function reload(){if(!G||rt>=0||ammo>=P.mag)return;rt=0;holdFire=false;updHud();playSnd('reload');autoPlay('reload')}
+function fire(now){
+  if(!G)return;if(ammo<=0){reload();return}
+  ammo--;nextShot=now+60000/P.rpm;rec=Math.min(1.6,rec+1);flashT=silenced?0:.05;updHud();playSnd(silenced&&SND.silencer?'silencer':'fire');autoPlay('shoot');
+  const m=cur.localToWorld(G.muzzle.clone()),d=G.dir,n=G.len;
+  const tr=new THREE.Mesh(new THREE.CylinderGeometry(n*.004,n*.004,n*.35,6),new THREE.MeshBasicMaterial({color:0xffd27a,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
+  tr.quaternion.setFromUnitVectors(AXV.y,d);tr.position.copy(m).addScaledVector(d,n*.2);fxg.add(tr);fxs.push({m:tr,v:d.clone().multiplyScalar(n*25),life:.4,age:0,fade:1});
+  const sh=new THREE.Mesh(new THREE.CylinderGeometry(n*.005,n*.005,n*.025,8),new THREE.MeshStandardMaterial({color:0xd9a441,metalness:1,roughness:.3,transparent:true}));
+  sh.position.copy(cur.localToWorld(G.ctr.clone().addScaledVector(G.upv,G.sz[G.up]*.15)));fxg.add(sh);
+  fxs.push({m:sh,v:G.side.clone().multiplyScalar(n*(.5+Math.random()*.3)).addScaledVector(G.upv,n*(.4+Math.random()*.3)),g:n*2.5,life:1.1,age:0,spin:14,fade:1});
+  const s=n*.07*(.8+Math.random()*.5);cone.scale.setScalar(s);coneOff=.8*s;cone.quaternion.setFromUnitVectors(AXV.y,d);fl.distance=n*2}
+function tick(){
+  const now=performance.now(),dt=Math.min(.05,(now-lastT)/1000);lastT=now;if(mix)mix.update(dt);
+  for(let i=fxs.length-1;i>=0;i--){const f=fxs[i];f.age+=dt;if(f.age>=f.life){fxg.remove(f.m);fxs.splice(i,1);continue}
+    if(f.g)f.v.addScaledVector(AXV.y,-f.g*dt);f.m.position.addScaledVector(f.v,dt);if(f.spin)f.m.rotation.x+=f.spin*dt;f.m.material.opacity=1-f.age/f.life}
+  flashT=Math.max(0,flashT-dt);fl.intensity=flashT>0?2.5:0;cone.visible=flashT>0;
+  if(!G||!cur)return;
+  if((tab==='anim'||tab==='edit')&&holdFire&&rt<0&&now>=nextShot)fire(now);
+  rec=Math.max(0,rec-dt*(4+rec*6));
+  let magOff=0,tilt=0,dip=0,bolt=Math.min(1,rec*1.3);
+  if(rt>=0){rt+=dt/P.reload;const s=(a,b)=>{const x=Math.min(1,Math.max(0,(rt-a)/(b-a)));return x*x*(3-2*x)};
+    const pose=s(0,.15)-s(.82,1);tilt=pose;dip=pose*(G.mag.length?.02:.07);magOff=-(s(.15,.4)-s(.45,.7))*G.len*.4;
+    bolt=Math.max(bolt,s(.72,.8)-s(.8,.9));if(rt>=.55&&ammo<P.mag){ammo=P.mag;updHud()}if(rt>=1){rt=-1;updHud()}}
+  const k=rec*P.recoil;
+  cur.position.copy(G.dir).multiplyScalar(-k*G.len*.03).addScaledVector(G.upv,-dip*G.len-k*G.len*.006);
+  cur.quaternion.setFromAxisAngle(G.side,k*.05-tilt*.3);
+  G.mag.forEach(o=>o.position.copy(G.base.get(o)).add(loc(o,G.upv.clone().multiplyScalar(magOff))));
+  G.bolt.forEach(o=>o.position.copy(G.base.get(o)).add(loc(o,G.dir.clone().multiplyScalar(-bolt*G.len*.07))));
+  if(flashT>0){cur.updateMatrixWorld(true);const m=cur.localToWorld(G.muzzle.clone());fl.position.copy(m);cone.position.copy(m).addScaledVector(G.dir,coneOff)}
+  ads=Math.min(1,Math.max(0,ads+(wantAds?1:-1)*dt*4));
+  if(ads>0||camSave){
+    if(!camSave)camSave={p:cam.position.clone(),t:ctl.target.clone()};
+    const e=ads*ads*(3-2*ads);ctl.enabled=false;
+    cam.position.lerpVectors(camSave.p,G.sight,e);cam.lookAt(V3(0,0,0).lerpVectors(camSave.t,G.look,e));
+    cam.fov=35+(P.fov-35)*e;cam.updateProjectionMatrix();$('scope').style.opacity=String(e);
+    if(ads===0&&!wantAds){camSave=null;ctl.enabled=true;cam.fov=35;cam.updateProjectionMatrix()}}
+}
+
+// ----- live camo, sounds, silencer -----
+const CAMO={galaxy:{a:'#05020f',b:'#5b1fd0',c:'#ff9ae6'},gold:{a:'#4a2d00',b:'#e0a400',c:'#fff3b0'},lava:{a:'#120000',b:'#ff3a00',c:'#ffd000'},ice:{a:'#06203a',b:'#3fb8ff',c:'#ffffff'}};
+const NOISE='float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}\n'+
+'float vn(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);'+
+'return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),'+
+'mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}\n'+
+'float fbm(vec3 p){float v=0.,a=.5;for(int i=0;i<4;i++){v+=a*vn(p);p*=2.02;a*=.5;}return v;}';
+function camoMat(k){const p=CAMO[k],m=new THREE.MeshStandardMaterial({color:0xffffff,metalness:.6,roughness:.35});
+  m.onBeforeCompile=sh=>{Object.assign(sh.uniforms,camoU,{uA:{value:new THREE.Color(p.a)},uB:{value:new THREE.Color(p.b)},uC:{value:new THREE.Color(p.c)}});
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vCP;').replace('#include <begin_vertex>','#include <begin_vertex>\nvCP=position;');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform float uTime;uniform vec3 uA;uniform vec3 uB;uniform vec3 uC;varying vec3 vCP;\n'+NOISE)
+      .replace('#include <color_fragment>','#include <color_fragment>\nfloat n=fbm(vCP*2.2+vec3(uTime*.05,uTime*.03,0.));float n2=fbm(vCP*4.5-vec3(0.,uTime*.12,uTime*.04));'+
+      'vec3 cc=mix(uA,uB,smoothstep(.35,.7,n));cc=mix(cc,uC,smoothstep(.62,.8,n2)*step(.5,n));diffuseColor.rgb*=cc*1.6;');};
+  m.customProgramCacheKey=()=>'camo';return m}
+let camoK='';
+function applyCamo(k){camoK=k||'';if(!G)return;eachMesh(m=>{if(!m.userData.orig)m.userData.orig=m.material;m.material=camoK?camoMat(camoK):m.userData.orig});refreshMats()}
+const SND={fire:null,reload:null,silencer:null};let silenced=false;
+function playSnd(k){const u=SND[k];if(!u)return;const a=new Audio(u.url);a.volume=1;a.play().catch(()=>{})}
+function setSnd(k,f){if(SND[k])URL.revokeObjectURL(SND[k].url);SND[k]=f?{url:URL.createObjectURL(f)}:null}
+function setSilenced(on){ATT.muzzle=on?{type:'suppressor',ox:0,oy:0,oz:0,rx:0,ry:0,rz:0}:null;rebuildAtt();renderAtt()}
+// ----- animation panel -----
+const SL=[['rpm','Fire rate (rpm)',120,1200,10],['recoil','Recoil',.2,2.5,.1],['mag','Magazine size',5,60,1],['reload','Reload (sec)',1,4,.1],['fov','Scope zoom (view angle)',8,35,1]];
+$('anp').innerHTML='<div class="r1"><button id="bF" class="pri">Fire (hold)</button><button id="bR">Reload</button><button id="bA">Aim</button><button id="bM">Flip muzzle</button><b id="ammo"></b></div><div class="sl">'+SL.map(s=>'<label>'+s[1]+' <output id="o_'+s[0]+'"></output><input type="range" id="s_'+s[0]+'" min="'+s[2]+'" max="'+s[3]+'" step="'+s[4]+'"></label>').join('')+'<label>Scope style<select id="s_scope"><option value="ring">Ring + dot</option><option value="dot">Red dot</option><option value="cross">Crosshair</option><option value="sniper">Sniper scope</option><option value="none">None</option></select></label></div><div class="hint">Keys: Space = fire, R = reload, A = aim. If the bullets come out the wrong end, tap Flip muzzle.</div>';
+$('anp').insertAdjacentHTML('beforeend','<div class="r1"><button id="bS">Silencer: off</button></div><div class="sl"><label>Fire sound<input type="file" id="sf" accept="audio/*"></label><label>Reload sound<input type="file" id="sr" accept="audio/*"></label><label>Silencer sound<input type="file" id="ss" accept="audio/*"></label><label>Camo<select id="camo"><option value="">None</option><option value="galaxy">Galaxy</option><option value="gold">Gold</option><option value="lava">Lava</option><option value="ice">Ice</option></select></label></div>');
+$('bS').onclick=()=>setSilenced(!silenced);
+$('sf').onchange=e=>setSnd('fire',e.target.files[0]);
+$('sr').onchange=e=>setSnd('reload',e.target.files[0]);
+$('ss').onchange=e=>setSnd('silencer',e.target.files[0]);
+$('camo').onchange=e=>applyCamo(e.target.value);
+function syncAnim(){SL.forEach(s=>{$('s_'+s[0]).value=P[s[0]];$('o_'+s[0]).textContent=P[s[0]]});$('s_scope').value=P.scope;$('scope').className='sc-'+P.scope;updHud()}
+SL.forEach(s=>$('s_'+s[0]).oninput=e=>{P[s[0]]=+e.target.value;if(s[0]==='mag')ammo=P.mag;syncAnim()});
+$('s_scope').onchange=e=>{P.scope=e.target.value;syncAnim()};
+const bF=$('bF');bF.onpointerdown=()=>{holdFire=true;if(performance.now()>=nextShot&&rt<0)fire(performance.now())};
+['pointerup','pointerleave','pointercancel'].forEach(ev=>bF.addEventListener(ev,()=>holdFire=false));
+$('bR').onclick=reload;
+function aimOff(){wantAds=false;$('bA').classList.remove('on');$('anp').classList.remove('aim')}
+$('bA').onclick=()=>{wantAds=!wantAds;$('bA').classList.toggle('on',wantAds);$('anp').classList.toggle('aim',wantAds);if(wantAds)autoPlay('aim');else stopClip()};
+$('bM').onclick=()=>{if(!G)return;G.me=1-G.me;G.dir.negate();G.muzzle=G.ends[G.me];setAim()};
+// ----- attachments: slots, parts, per-part position and rotation -----
+const SLOTS={muzzle:'Muzzle',grip:'Grip',stock:'Stock',sight:'Sight',scope:'Scope'};
+const PARTS={muzzle:{brake:'Muzzle brake',suppressor:'Suppressor'},grip:{vgrip:'Vertical grip'},stock:{fixed:'Fixed stock'},sight:{dot:'Red dot'},scope:{s1:'1x ring scope',s4:'4x scope',s8:'8x sniper scope'}};
+let attSlot='muzzle';
+const rad=d=>d*Math.PI/180;
+function partGeo(t){const L=G.len,g=new THREE.Group(),M=()=>new THREE.MeshStandardMaterial({color:0x15171a,metalness:.7,roughness:.35});
+  const add=(geo,x,y,z,mat)=>{const m=new THREE.Mesh(geo,mat||M());m.position.set(x,y,z);g.add(m)};
+  const cyl=(r,h,y,mat)=>add(new THREE.CylinderGeometry(r,r,h,16),0,y,0,mat);
+  const box=(w,h,d,x,y,z,mat)=>add(new THREE.BoxGeometry(w,h,d),x,y,z,mat);
+  if(t==='brake')cyl(L*.022,L*.06,L*.03);
+  else if(t==='suppressor')cyl(L*.022,L*.22,L*.11);
+  else if(t==='vgrip')box(L*.03,L*.08,L*.12,0,0,-L*.06);
+  else if(t==='fixed')box(L*.07,L*.3,L*.16,0,-L*.15,-L*.02);
+  else if(t==='dot'){box(L*.035,L*.07,L*.05,0,0,L*.025);box(L*.02,L*.004,L*.02,0,L*.036,L*.05,new THREE.MeshBasicMaterial({color:0xff2a2a}))}
+  else if(t==='s1'){cyl(L*.016,L*.16,0);cyl(L*.019,L*.02,L*.08);cyl(L*.019,L*.02,-L*.08)}
+  else if(t==='s4'){cyl(L*.02,L*.22,0);cyl(L*.022,L*.02,L*.11);cyl(L*.022,L*.02,-L*.11)}
+  else if(t==='s8'){cyl(L*.024,L*.3,0);cyl(L*.026,L*.02,L*.15);cyl(L*.026,L*.02,-L*.15)}
+  return g}
+function rebuildAtt(){if(!G)return;const A=G.add;
+  Object.keys(SLOTS).forEach(s=>{const o=A.getObjectByName('att_'+s);if(o)A.remove(o)});
+  const d=G.dir.clone().normalize(),u=G.upv.clone().normalize(),sd=d.clone().cross(u).normalize();
+  const q=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(sd,d,u));
+  const top=G.ctr.clone().addScaledVector(G.upv,G.sz[G.up]/2),bot=G.ctr.clone().addScaledVector(G.upv,-G.sz[G.up]/2);
+  const ANCH={muzzle:G.muzzle.clone(),sight:top,scope:top.clone(),grip:bot,stock:G.ends[G.me?0:1].clone()};
+  for(const s in SLOTS){const a=ATT[s];if(!a||!a.type)continue;
+    const root=new THREE.Group();root.name='att_'+s;root.quaternion.copy(q);root.position.copy(ANCH[s]);
+    const user=new THREE.Group();user.position.set(a.oz*G.len,a.ox*G.len,a.oy*G.len);user.rotation.set(rad(a.rx),rad(a.ry),rad(a.rz));
+    user.add(partGeo(a.type));root.add(user);A.add(root)}
+  silenced=!!(ATT.muzzle&&ATT.muzzle.type==='suppressor');
+  if($('bS')){$('bS').textContent='Silencer: '+(silenced?'on':'off');$('bS').classList.toggle('on',silenced)}}
+function renderAtt(){const box=$('attUI');if(!box)return;
+  if(!G){box.innerHTML='<div class="hint">Load a gun to add attachments.</div>';return}
+  const cur=ATT[attSlot];
+  let h='<div class="eh">Attachments</div><div class="r1">'+Object.keys(SLOTS).map(s=>'<button data-s="'+s+'"'+(s===attSlot?' class="on"':'')+'>'+SLOTS[s]+(ATT[s]&&ATT[s].type?' ✓':'')+'</button>').join('')+'</div>';
+  h+='<div class="r1">'+['<button data-p="">None</button>'].concat(Object.keys(PARTS[attSlot]).map(p=>'<button data-p="'+p+'"'+(cur&&cur.type===p?' class="on"':'')+'>'+PARTS[attSlot][p]+'</button>')).join('')+'</div>';
+  if(cur){const row=(k,l,lo,hi,st)=>'<div class="kr"><span>'+l+'</span><input type="range" data-k="'+k+'" min="'+lo+'" max="'+hi+'" step="'+st+'" value="'+cur[k]+'"><input type="number" data-n="'+k+'" min="'+lo+'" max="'+hi+'" step="'+st+'" value="'+cur[k]+'" style="width:64px"></div>';
+    h+=row('ox','Along barrel (×len)',-.5,.5,.005)+row('oy','Up (×len)',-.5,.5,.005)+row('oz','Side (×len)',-.5,.5,.005)+row('rx','Tilt X (°)',-180,180,1)+row('ry','Tilt Y (°)',-180,180,1)+row('rz','Roll Z (°)',-180,180,1)+'<div class="r1"><button id="attRst">Reset position</button></div>'}
+  else h+='<div class="hint">Pick a part above to attach it to this slot.</div>';
+  box.innerHTML=h;
+  box.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{attSlot=b.dataset.s;renderAtt()});
+  box.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const p=b.dataset.p;ATT[attSlot]=p?{type:p,ox:0,oy:0,oz:0,rx:0,ry:0,rz:0}:null;rebuildAtt();renderAtt()});
+  box.querySelectorAll('input[data-k],input[data-n]').forEach(i=>i.oninput=()=>{const k=i.dataset.k||i.dataset.n,a=ATT[attSlot];a[k]=+i.value;box.querySelectorAll('[data-k="'+k+'"],[data-n="'+k+'"]').forEach(x=>{if(x!==i)x.value=i.value});rebuildAtt()});
+  const rs=$('attRst');if(rs)rs.onclick=()=>{Object.assign(ATT[attSlot],{ox:0,oy:0,oz:0,rx:0,ry:0,rz:0});rebuildAtt();renderAtt()};
+}
+// ----- character and gun clips: play, auto-map reload/shoot/aim, export with clips -----
+let CLIPS=[],mix=null,curAct=null;
+const CLIP_RE={reload:/reload/i,shoot:/fire|shoot|\bshot/i,aim:/\baim\b|\bads\b/i};
+function setupClips(obj){if(mix){mix.stopAllAction();mix=null}curAct=null;
+  CLIPS=(obj.userData&&obj.userData.anims)||[];const row=$('clipRow');if(!row)return;
+  row.classList.toggle('hide',!CLIPS.length);
+  $('clipSel').innerHTML=CLIPS.map((c,i)=>'<option value="'+i+'">'+esc(c.name||'clip '+(i+1))+'</option>').join('');
+  if(CLIPS.length)mix=new THREE.AnimationMixer(obj)}
+function playClip(i,once,hold){if(!mix||!CLIPS[i])return;const a=mix.clipAction(CLIPS[i]);a.reset();
+  a.setLoop(once?THREE.LoopOnce:THREE.LoopRepeat,once?1:Infinity);a.clampWhenFinished=!!hold;
+  if(curAct&&curAct!==a)curAct.fadeOut(.2);a.fadeIn(.2).play();curAct=a}
+function stopClip(){if(curAct){curAct.fadeOut(.2);curAct=null}}
+function autoPlay(k){if(!mix)return;const i=CLIPS.findIndex(c=>CLIP_RE[k].test(c.name||''));if(i>=0)playClip(i,true,k==='aim')}
+$('anp').insertAdjacentHTML('beforeend','<div id="clipRow" class="hide"><div class="kr"><span>Clip</span><select id="clipSel"></select></div><div class="r1"><button id="clipPlay">Play (loop)</button><button id="clipStop">Stop</button></div></div>');
+$('clipPlay').onclick=()=>{if(CLIPS.length)playClip(+$('clipSel').value,false,false)};
+$('clipStop').onclick=stopClip;
+// ----- Nova AI models, NEW badge, live backgrounds -----
+const DEF_MODELS=[
+ {id:'forge',name:'Nova AI Forge',tier:'complex',persona:'You are Nova AI Forge: a precise technical artist. Make the smallest change that solves the problem, explain it in one plain sentence, and never add steps the user did not ask for.',knowledge:'',released:Date.parse('2026-10-14')},
+ {id:'sentinel',name:'Nova AI Sentinel',tier:'complex',persona:'You are Nova AI Sentinel: a strict quality reviewer. Before changing anything, look for problems the shooter check would flag and fix them first. Always state any risk you find, even when not asked.',knowledge:'',released:Date.parse('2026-10-14')},
+ {id:'muse',name:'Nova AI Muse',tier:'default',persona:'You are Nova AI Muse: a creative designer. Propose bold event skins and camo and charm combinations, explain the design idea in one sentence, and offer one alternative.',knowledge:'',released:Date.parse('2026-10-14')}];
+const getModels=()=>{const m=getStore('nova_models',null),src=Array.isArray(m)&&m.length?m:DEF_MODELS;return src.map(x=>({...x,rules:x.rules||[],notes:x.notes||(x.knowledge?[{text:x.knowledge,src:'typed'}]:[])}))};
+const saveState=(ms,rules)=>{const u=getStore('nova_undo',[]);u.push({models:getModels(),rules:getStore('nova_rules',[])});if(u.length>20)u.shift();setStore('nova_undo',u);if(ms)setStore('nova_models',ms);if(rules)setStore('nova_rules',rules)};
+const saveModels=ms=>saveState(ms,null);
+const undoModels=()=>{const u=getStore('nova_undo',[]);if(!u.length)return false;const last=u.pop();setStore('nova_undo',u);if(Array.isArray(last)){setStore('nova_models',last);return true}setStore('nova_models',last.models);setStore('nova_rules',last.rules);return true};
+const mutAI=(id,fn)=>{const ms=getModels(),m=ms.find(x=>x.id===id);if(!m)return;fn(m);saveModels(ms)};
+const CLAUDE_MODELS=[{id:'',label:'Auto (by thinking level)'},{id:'claude-haiku-5-5',label:'Claude Haiku 5.5 (fastest)'},{id:'claude-sonnet-5-5',label:'Claude Sonnet 5.5'},{id:'claude-opus-5-5',label:'Claude Opus 5.5'},{id:'claude-fable-5-1',label:'Claude Fable 5.1 (best)'}];
+const modelOpts=cur=>CLAUDE_MODELS.map(o=>'<option value="'+o.id+'"'+((cur||'')===o.id?' selected':'')+'>'+esc(o.label)+'</option>').join('');
+const smOpts=(ai,extra)=>Object.assign({cache:false,modelTier:ai.tier},ai.model?{model:ai.model}:{},extra||{});
+const curModel=()=>{const ms=getModels(),id=getStore('nova_sel',null);return ms.find(m=>m.id===id)||ms[0]};
+const isNew=m=>Date.now()-m.released<14*864e5;
+const modelBlock=()=>{const m=curModel(),rules=getStore('nova_rules',[]).filter(r=>r.on),notes=m.notes||[];
+  return (m.base!=null?m.base:KNOW)+'\n\nYOU ARE: '+m.name+'. '+(m.persona||'')+
+  (rules.length?'\n\nRULES FOR EVERY AI (follow whenever the situation matches):\n'+rules.map(r=>'- WHEN '+r.when+': '+r.do).join('\n'):'')+
+  (notes.length?'\n\nKNOWLEDGE FOR THIS AI:\n'+notes.map(n=>'- '+n.text).join('\n'):'')+
+  '\n\nSELF-REVIEW: after your ops the shooter check runs. If it still reports problems, you will be asked to fix them.'};
+const parseJ=t=>{try{return JSON.parse(t.slice(t.indexOf('{'),t.lastIndexOf('}')+1))}catch(e){return null}};
+$('aiPick').onclick=()=>$('aiMenu').classList.toggle('hide');
+$('aiMenu').onclick=e=>{const b=e.target.closest('button');if(!b)return;setStore('nova_sel',b.dataset.ai);$('aiMenu').classList.add('hide');refreshModelUI()};
+document.addEventListener('click',e=>{if(!$('aiSide').contains(e.target))$('aiMenu').classList.add('hide')});
+function refreshModelUI(){const ms=getModels(),cur=curModel()||ms[0];
+  $('aiPickName').textContent=(cur&&cur.name)||'Nova AI Forge';
+  $('aiMenu').innerHTML=ms.map(m=>'<button class="aiOpt'+(cur&&m.id===cur.id?' on':'')+'" data-ai="'+esc(m.id)+'"><span>'+esc(m.name)+'</span>'+(cur&&m.id===cur.id?'<span class="inuse">In use</span>':'')+'</button>').join('')}
+const kvGet=k=>new Promise(res=>{if(!db)return res(null);try{const r=db.transaction('kv').objectStore('kv').get(k);r.onsuccess=()=>res(r.result||null);r.onerror=()=>res(null)}catch(e){res(null)}});
+const kvPut=(k,v)=>new Promise(res=>{if(!db)return res(false);try{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>res(true);t.onerror=t.onabort=()=>res(false)}catch(e){res(false)}});
+const kvDel=k=>new Promise(res=>{if(!db)return res();try{const t=db.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=t.onerror=()=>res()}catch(e){res()}});
+let bgURL=null;
+const applyBgOpacity=()=>{$('bgwrap').style.opacity=getStore('gvlook',{}).bgo||1};
+function removeBg(){if(bgURL){URL.revokeObjectURL(bgURL);bgURL=null}$('bgwrap').innerHTML='';document.body.classList.remove('hasbg')}
+function applyBg(b){removeBg();bgURL=URL.createObjectURL(b.blob);const isV=(b.type||'').startsWith('video');
+  const el=document.createElement(isV?'video':'img');el.src=bgURL;
+  if(isV){el.muted=true;el.loop=true;el.autoplay=true;el.playsInline=true;el.play().catch(()=>{})}
+  $('bgwrap').appendChild(el);document.body.classList.add('hasbg');applyBgOpacity()}
+// ----- AI maker: two tabs, shared rules, backups, video teaching -----
+let mkSel=null,mkTab='manage';
+const VID_MAX=50,BK_MAX=12;
+const getRules=()=>getStore('nova_rules',[]);
+const getBackups=()=>getStore('nova_backups',[]);
+const getVids=()=>getStore('nova_vids',[]);
+const saveRules=r=>saveState(null,r);
+const vidBytes=()=>getVids().reduce((a,v)=>a+(v.size||0),0);
+const fmtMB=b=>(b/1048576).toFixed(1)+' MB';
+const vmsg=t=>{const e=$('vidMsg')||$('tMsg');if(e)e.textContent=t};
+function migrateRules(){if(getStore('nova_rules',null)===null){const all=[];getModels().forEach(m=>(m.rules||[]).forEach(r=>all.push(r)));setStore('nova_rules',all)}}
+async function selfFix(sm){if(!G||!liveCheck().f.length)return[];
+  const c=liveCheck(),r=await sm(modelBlock()+'\n\nREVIEW: the shooter check still shows these problems on the gun: '+c.f.map(i=>i.t+' ('+i.d+')').join('; ')+'. Reply ONLY one JSON object {"reply":"one sentence","ops":[...]} with ops that fix them.\n\nGUN CONTEXT (json):\n'+JSON.stringify(describe()),smOpts(curModel()));
+  const j=parseJ(r.text||'');const ops=j&&Array.isArray(j.ops)?j.ops:[];if(!ops.length)return[];opsLog.push(ops);return['Review: '+(j.reply||'fixed the remaining problems.')].concat(runOps(ops))}
+async function sampleFrames(file,N){const url=URL.createObjectURL(file),v=document.createElement('video');v.src=url;v.muted=true;v.preload='auto';const out=[];
+  try{await new Promise((ok,no)=>{v.onloadedmetadata=ok;v.onerror=()=>no(new Error('bad video'))});
+    if(!isFinite(v.duration)||!v.duration)return[];
+    const c=document.createElement('canvas');c.width=640;c.height=Math.round(640*(v.videoHeight||9)/(v.videoWidth||16));const g=c.getContext('2d');
+    for(let i=0;i<N;i++){const seeked=new Promise(r=>v.onseeked=r);v.currentTime=v.duration*(i+.5)/N;await seeked;g.drawImage(v,0,0,c.width,c.height);out.push(await new Promise(r=>c.toBlob(r,'image/jpeg',.8)))}
+  }catch(e){return[]}finally{URL.revokeObjectURL(url)}
+  return out.filter(Boolean)}
+async function teachBatch(files,aiId){if(!files.length)return;
+  const ai=getModels().find(x=>x.id===aiId);if(!ai){vmsg('Pick an AI first.');return}
+  let sm=null;try{sm=window.claude&&await window.claude.use('sample')}catch(e){}
+  if(!sm){vmsg('The AI is not available here. Publish the page with sample access allowed, then try again.');return}
+  let imgOk=false;try{const L=await sm.limits();imgOk=!!(L&&L.images)}catch(e){}
+  if(!imgOk){vmsg('Picture access is off for this page, so videos cannot be read. Republish with image access allowed.');return}
+  const batch=files.slice(0,VID_MAX),extra=files.length-batch.length;let failed=0,kept=0;
+  for(let n=0;n<batch.length;n++){const f=batch[n];vmsg('Reading video '+(n+1)+' of '+batch.length+' for '+ai.name+': '+f.name+'…');
+    const frames=await sampleFrames(f,8);if(!frames.length){failed++;continue}
+    let list=[];try{const r=await sm('These are '+frames.length+' frames from one video, evenly spaced, no sound. Write 5 to 12 short knowledge notes that the AI "'+ai.name+'" needs: what is shown, the steps taken, parts or settings used, and what to copy or avoid. Reply ONLY JSON {"notes":["..."]}.',smOpts(ai,{images:frames}));
+      const j=parseJ(r.text||'');list=(j&&Array.isArray(j.notes)?j.notes:[]).filter(x=>typeof x==='string'&&x.trim())}catch(e){list=[]}
+    if(!list.length){failed++;continue}
+    const vid='v'+Date.now().toString(36)+n;
+    if(await kvPut('vid:'+vid,f)){kept++;const idx=getVids();idx.push({id:vid,name:f.name,size:f.size,ai:aiId,added:Date.now()});setStore('nova_vids',idx)}
+    mutAI(aiId,mm=>{mm.notes=(mm.notes||[]).concat(list.map(t=>({text:'['+f.name+'] '+t,src:'video',vid:kept?vid:undefined})))});
+  }
+  renderMaker();
+  vmsg('Done for '+ai.name+': '+(batch.length-failed)+' of '+batch.length+' videos taught.'+(failed?' '+failed+' could not be read.':'')+(extra>0?' '+extra+' were skipped because the limit is '+VID_MAX+' per batch. Select them again to teach more.':'')+' About 8 frames were read per video, with no sound.');
+}
+function removeVid(id){kvDel('vid:'+id);setStore('nova_vids',getVids().filter(v=>v.id!==id));const all=getModels();all.forEach(m=>{m.notes=(m.notes||[]).filter(n=>n.vid!==id)});saveModels(all);renderMaker()}
+function moveAI(d){const all=getModels(),i=all.findIndex(x=>x.id===mkSel),j=i+d;if(i<0||j<0||j>=all.length)return;[all[i],all[j]]=[all[j],all[i]];saveModels(all);renderMaker();refreshModelUI()}
+function manageHTML(ms,m){const B=m.base!=null?m.base:KNOW,vids=getVids().filter(v=>v.ai===m.id),bk=getBackups();
+  return '<div class="mk"><div>'+
+  ms.map((x,i)=>'<div class="mkrow"><button class="mkb'+(x.id===m.id?' on':'')+'" data-id="'+esc(x.id)+'">Slot '+(i+1)+': '+esc(x.name)+(isNew(x)?' <span class="nb">NEW</span>':'')+'</button><label class="b vidpick">Choose video for this AI<input type="file" class="vidAI" data-ai="'+esc(x.id)+'" accept="video/*" multiple></label></div>').join('')+
+  '<div class="eh">Create an AI</div><input id="mkNew" placeholder="Name, e.g. Nova AI Scout"><textarea id="mkJob" rows="3" placeholder="Tell it what to do"></textarea><div class="r1"><button id="mkAdd" class="pri">Create AI</button></div>'+
+  '<div class="eh">Backup slots ('+bk.length+'/'+BK_MAX+')</div><div class="r1"><button id="mkBakSave">Save this AI to a backup slot</button></div>'+
+  bk.map(b=>'<div class="mdcard"><div>'+esc(b.name)+'</div><div class="r1"><button data-brep="'+b.id+'">Replace this AI</button><button data-bnew="'+b.id+'">Restore as new AI</button><button data-bdel="'+b.id+'">Delete</button></div></div>').join('')+
+  '<div class="eh">Backup text</div><textarea id="mkBk" rows="3"></textarea><div class="r1"><button id="mkBkMk">Make text backup</button><button id="mkRs">Restore from text</button></div>'+
+  '</div><div>'+
+  '<div class="eh">Identity</div><input id="mkName" value="'+esc(m.name)+'"><select id="mkTier">'+TIERS.map(t=>'<option'+(t===m.tier?' selected':'')+'>'+t+'</option>').join('')+'</select>'+'<select id="mkModel" title="Claude model this AI uses">'+modelOpts(m.model)+'</select>'+
+  '<textarea id="mkPersona" rows="2">'+esc(m.persona||'')+'</textarea><div class="r1"><button id="mkSaveId" class="pri">Save identity</button><button id="mkUp">Move up</button><button id="mkDown">Move down</button><button id="mkDel">Remove this AI</button></div>'+
+  '<div class="eh">What this AI does (its instructions)</div><textarea id="mkBase" rows="12">'+esc(B)+'</textarea>'+
+  '<div class="r1"><button id="mkSaveBase" class="pri">Save instructions</button><button id="mkBaseRst">Reset to built-in</button></div>'+
+  '<div class="eh">Knowledge for this AI</div>'+(m.notes||[]).map((n,i)=>'<div class="mdcard"><div>'+esc(n.text)+'</div><div class="r1"><button data-ndel="'+i+'">Remove</button></div></div>').join('')+
+  '<textarea id="nNew" rows="2" placeholder="Add a fact or rule for this AI"></textarea><div class="r1"><button id="nAdd" class="pri">Add note</button></div>'+
+  '<div class="eh">Videos for '+esc(m.name)+' (up to '+VID_MAX+' per batch)</div>'+
+  '<div id="vidMsg" class="hint">'+vids.length+' video(s) saved for this AI, '+fmtMB(vids.reduce((a,v)=>a+(v.size||0),0))+' in total. The AI reads about 8 frames per video, with no sound.</div>'+
+  vids.map(v=>'<div class="mdcard"><div>'+esc(v.name)+' · '+fmtMB(v.size||0)+'</div><div class="r1"><button data-vdel="'+v.id+'">Remove video</button></div></div>').join('')+
+  '</div></div>'}
+function addHTML(ms){const rules=getRules();
+  return '<div class="mk"><div>'+
+  '<div class="eh">Add a rule (applies to every AI)</div><input id="rWhen" placeholder="When someone asks… e.g. make it a sniper"><textarea id="rDo" rows="2" placeholder="Do… e.g. scale to 1.2 m and add the 8x scope"></textarea><div class="r1"><button id="rAdd" class="pri">Add rule</button></div>'+
+  '<div class="eh">Rules on every AI ('+rules.length+')</div>'+rules.map((r,i)=>'<div class="mdcard"><div class="kr"><label><input type="checkbox" data-ron="'+i+'"'+(r.on?' checked':'')+'> on</label><button data-rdel="'+i+'">Remove</button></div><div><b>When</b> '+esc(r.when)+'</div><div><b>Do</b> '+esc(r.do)+'</div></div>').join('')+
+  '</div><div>'+
+  '<div class="eh">Add knowledge to</div>'+ms.map(m=>'<label style="display:block;margin:4px 0"><input type="checkbox" data-kai="'+esc(m.id)+'"> '+esc(m.name)+'</label>').join('')+
+  '<textarea id="kNew" rows="3" placeholder="A fact, rule or research note"></textarea><div class="r1"><button id="kAdd" class="pri">Add knowledge</button></div>'+
+  '<div class="eh">Teach each AI from videos</div>'+ms.map(m=>'<div class="mdcard"><div>'+esc(m.name)+'</div><label class="b vidpick">Choose video for '+esc(m.name)+'<input type="file" class="vidAI" data-ai="'+esc(m.id)+'" accept="video/*" multiple></label></div>').join('')+
+  '<div id="tMsg" class="hint">Each batch takes up to '+VID_MAX+' videos. Select more in another batch.</div>'+
+  '<div class="eh">My additions</div><div class="hint">'+rules.length+' rule(s) on every AI · '+ms.reduce((a,m)=>a+(m.notes||[]).length,0)+' knowledge note(s) · '+getVids().length+' video(s), '+fmtMB(vidBytes())+' stored</div>'+
+  '</div></div>'}
+function renderMaker(){const ms=getModels();if(!ms.find(m=>m.id===mkSel))mkSel=ms[0].id;const m=ms.find(x=>x.id===mkSel);
+  $('maker').innerHTML='<div class="r1"><b style="font-size:18px;flex:1">AI Maker</b><button class="'+(mkTab==='manage'?'on':'')+'" data-tab="manage">Manage AIs</button><button class="'+(mkTab==='add'?'on':'')+'" data-tab="add">Add new feature</button><button id="mkUndo">Undo last change</button><button id="mkX">Close</button></div>'+
+  (mkTab==='manage'?manageHTML(ms,m):addHTML(ms));
+  const edit=fn=>{mutAI(mkSel,fn);renderMaker();refreshModelUI()};
+  $('maker').querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{mkTab=b.dataset.tab;renderMaker()});
+  $('mkX').onclick=()=>$('maker').classList.add('hide');
+  $('maker').querySelectorAll('.vidAI').forEach(i=>i.onchange=e=>{const fl=Array.from(e.target.files);e.target.value='';teachBatch(fl,i.dataset.ai)});
+  $('mkUndo').onclick=()=>{undoModels();renderMaker();refreshModelUI()};
+  if(mkTab==='manage')bindManage(ms,m,edit);else bindAdd(ms)}
+function bindManage(ms,m,edit){
+  $('maker').querySelectorAll('.mkb').forEach(b=>b.onclick=()=>{mkSel=b.dataset.id;renderMaker()});
+  $('mkAdd').onclick=()=>{const n=$('mkNew').value.trim();if(!n)return;const job=$('mkJob').value.trim(),all=getModels(),id='ai'+Date.now().toString(36);
+    all.push({id,name:n,tier:'default',persona:'You are '+n+'. Be clear, accurate and careful.',base:job?KNOW+'\n\nTHIS AI JOB (follow it closely):\n'+job:undefined,notes:[],released:Date.now()});saveModels(all);mkSel=id;renderMaker();refreshModelUI()};
+  $('mkBakSave').onclick=()=>{const b=getBackups();if(b.length>=BK_MAX){alert('All '+BK_MAX+' backup slots are full. Delete one first.');return}b.push({id:'b'+Date.now().toString(36),name:m.name,saved:Date.now(),ai:m});setStore('nova_backups',b);renderMaker()};
+  $('maker').querySelectorAll('[data-brep]').forEach(x=>x.onclick=()=>{const b=getBackups().find(y=>y.id===x.dataset.brep);if(!b||!confirm('Replace '+m.name+' with the backup "'+b.name+'"?'))return;
+    edit(t=>{const keep=t.id;Object.keys(t).forEach(k=>delete t[k]);Object.assign(t,JSON.parse(JSON.stringify(b.ai)),{id:keep})})});
+  $('maker').querySelectorAll('[data-bnew]').forEach(x=>x.onclick=()=>{const b=getBackups().find(y=>y.id===x.dataset.bnew);if(!b)return;const all=getModels(),c=JSON.parse(JSON.stringify(b.ai));c.id='ai'+Date.now().toString(36);c.name=c.name+' (restored)';all.push(c);saveModels(all);mkSel=c.id;renderMaker();refreshModelUI()});
+  $('maker').querySelectorAll('[data-bdel]').forEach(x=>x.onclick=()=>{setStore('nova_backups',getBackups().filter(y=>y.id!==x.dataset.bdel));renderMaker()});
+  $('mkSaveId').onclick=()=>edit(t=>{t.name=$('mkName').value.trim()||t.name;t.tier=$('mkTier').value;t.persona=$('mkPersona').value});
+  $('mkModel').onchange=()=>edit(t=>{t.model=$('mkModel').value||undefined});
+  $('mkSaveBase').onclick=()=>edit(t=>{t.base=$('mkBase').value});
+  $('mkBaseRst').onclick=()=>{if(confirm('Replace the instructions with the built-in gun instructions?'))edit(t=>{delete t.base})};
+  $('mkUp').onclick=()=>moveAI(-1);$('mkDown').onclick=()=>moveAI(1);
+  $('mkDel').onclick=()=>{const all=getModels();if(all.length<2){alert('Keep at least one AI.');return}if(!confirm('Remove '+m.name+'? Its videos are removed too.'))return;
+    getVids().filter(v=>v.ai===m.id).forEach(v=>kvDel('vid:'+v.id));setStore('nova_vids',getVids().filter(v=>v.ai!==m.id));saveModels(all.filter(x=>x.id!==m.id));mkSel=null;renderMaker();refreshModelUI()};
+  $('maker').querySelectorAll('[data-ndel]').forEach(x=>x.onclick=()=>edit(t=>{t.notes.splice(+x.dataset.ndel,1)}));
+  $('nAdd').onclick=()=>{const v=$('nNew').value.trim();if(!v)return;edit(t=>{(t.notes=t.notes||[]).push({text:v,src:'typed'})})};
+  $('maker').querySelectorAll('[data-vdel]').forEach(x=>x.onclick=()=>removeVid(x.dataset.vdel));
+  $('mkBkMk').onclick=()=>{$('mkBk').value=JSON.stringify(getModels(),null,1)};
+  $('mkRs').onclick=()=>{let a;try{a=JSON.parse($('mkBk').value)}catch(e){alert('That text is not valid backup data.');return}if(!Array.isArray(a)||!a.length||!a.every(x=>x&&x.id&&x.name)){alert('That backup has no AIs in it.');return}saveModels(a);mkSel=null;renderMaker();refreshModelUI()}}
+function bindAdd(ms){
+  $('rAdd').onclick=()=>{const w=$('rWhen').value.trim(),d=$('rDo').value.trim();if(!w||!d)return;const r=getRules();r.push({id:'r'+Date.now().toString(36),when:w,do:d,on:true});saveRules(r);renderMaker()};
+  $('maker').querySelectorAll('[data-ron]').forEach(c=>c.onchange=()=>{const r=getRules();r[+c.dataset.ron].on=c.checked;saveRules(r);renderMaker()});
+  $('maker').querySelectorAll('[data-rdel]').forEach(b=>b.onclick=()=>{const r=getRules();r.splice(+b.dataset.rdel,1);saveRules(r);renderMaker()});
+  $('kAdd').onclick=()=>{const t=$('kNew').value.trim(),pick=[...$('maker').querySelectorAll('[data-kai]:checked')].map(c=>c.dataset.kai);if(!t||!pick.length)return;
+    const all=getModels();all.forEach(m=>{if(pick.includes(m.id))(m.notes=m.notes||[]).push({text:t,src:'typed'})});saveModels(all);renderMaker()};
+}
+$('amb').onclick=()=>{$('maker').classList.remove('hide');renderMaker()};
+// ----- developer: look, AI tier, recipes, code rot check -----
+const TIERS=['quick','default','complex'],FONTS={system:'',serif:'Georgia, serif',mono:'ui-monospace, Menlo, monospace'};
+const memStore={};
+const getStore=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return (k in memStore)?memStore[k]:d}};
+const setStore=(k,v)=>{memStore[k]=v;try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const getRec=()=>getStore('gvrec',{});
+const tierNow=()=>{let t=null;try{t=localStorage.getItem('gvtier')}catch(e){}return TIERS.includes(t)?t:'complex'};
+function applyLook(t){const st=document.documentElement.style;[['bg2','--bg2'],['panel','--panel'],['fg','--fg'],['ac','--ac']].forEach(([k,v])=>{if(t[k])st.setProperty(v,t[k])});document.body.style.fontFamily=FONTS[t.font]||''}
+applyLook(getStore('gvlook',{}));
+function healthCheck(){const out=[],src=[...document.querySelectorAll('script:not([src])')].map(x=>x.textContent).join('\n'),html=document.documentElement.outerHTML;
+  const refs=[...new Set([...src.matchAll(/\$\('([\w-]+)'\)/g)].map(m=>m[1]))];
+  const defs=new Set([...(src+html).matchAll(/id=\\?["']([\w-]+)/g)].map(m=>m[1]));
+  refs.filter(id=>!defs.has(id)).forEach(id=>out.push('FIX  the code uses element #'+id+' but nothing defines it'));
+  const ops=[...new Set([...KNOW.matchAll(/"op":"(\w+)"/g)].map(m=>m[1]))];
+  ops.filter(o=>!OPS[o]).forEach(o=>out.push('FIX  the AI is told about the step "'+o+'" but the editor cannot run it'));
+  Object.keys(OPS).filter(o=>!ops.includes(o)&&o!=='recipe').forEach(o=>out.push('NOTE the editor runs "'+o+'" but the AI is not told about it'));
+  [['THREE',typeof THREE!=='undefined'],['JSZip',typeof JSZip!=='undefined'],['GLTF exporter',!!(window.THREE&&THREE.GLTFExporter)]].forEach(([n,y])=>{if(!y)out.push('FIX  the '+n+' library did not load')});
+  if(ERRS.length)out.push('NOTE '+ERRS.length+' error(s) logged since the page loaded');
+  return out.length?out:['OK   No code rot found.']}
+// ----- developer panel: version, checks, error log, AI notes -----
+const extraAI=()=>{try{return(localStorage.getItem('gvai')||'').trim()}catch(e){return''}};
+async function runChecks(){const out=[],ok=(c,t)=>out.push((c?'OK   ':'FAIL ')+t);
+  ok(typeof THREE!=='undefined','Three.js loaded');
+  ok(typeof JSZip!=='undefined','ZIP reader loaded');
+  ok(!!THREE.GLTFLoader&&!!THREE.OBJLoader,'GLTF and OBJ loaders loaded');
+  ok(!!THREE.GLTFExporter,'GLTF exporter loaded');
+  ok(!!window.indexedDB,'Browser database available (saves your library)');
+  let ls=false;try{localStorage.setItem('gvtest','1');localStorage.removeItem('gvtest');ls=true}catch(e){}
+  ok(ls,'Local storage works (saves your key bindings and AI notes)');
+  ok(!!G,'A gun is loaded'+(G?'':' (load one to test the gun tools)'));
+  let aiOk=false;try{aiOk=!!(window.claude&&await window.claude.use('sample'))}catch(e){}
+  ok(aiOk,'AI available'+(aiOk?'':' (only when published with AI access allowed)'));
+  ok(ERRS.length===0,'Errors since page load: '+ERRS.length);
+  $('devChk').textContent=out.join('\n')}
+function renderDev(){const L=getStore('gvlook',{}),R=getRec();
+  const color=(k,label,def)=>'<div class="kr"><span>'+label+'</span><input type="color" id="lk_'+k+'" value="'+(L[k]||def)+'" style="width:64px;height:30px;padding:0"></div>';
+  $('dvp').innerHTML='<div class="eh">Developer · v'+VERSION+'</div>'+
+  '<div class="eh">Look</div>'+color('bg2','Page background','#cfd3d9')+color('panel','Panels','#f6f7f8')+color('fg','Text','#1b1e23')+color('ac','Accent','#e0742a')+
+  '<div class="kr"><span>Font</span><select id="lk_font">'+[['system','Modern'],['serif','Serif'],['mono','Mono']].map(([v,t])=>'<option value="'+v+'"'+((L.font||'system')===v?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'+
+  '<div class="r1"><button id="lkReset">Reset look</button></div>'+
+  '<div class="eh">AI rules (apply to every model)</div>'+
+  '<textarea id="devAI" rows="4" placeholder="Rules the AI must follow, e.g. the Halloween gun always gets a pumpkin charm.">'+esc(extraAI())+'</textarea>'+
+  '<div class="r1"><button id="dvSave">Save AI rules</button><button id="dvAIclr">Clear rules</button></div>'+
+  '<div class="eh">Background (video, GIF or image)</div>'+
+  '<label class="b" style="display:block;text-align:center">Upload background<input type="file" id="bgF" accept="video/*,image/*"></label>'+
+  '<div class="kr"><span>Strength</span><input type="range" id="bgO" min="0.2" max="1" step="0.05" value="'+(L.bgo||1)+'"></div>'+
+  '<div class="r1"><button id="bgClr">Remove background</button></div>'+
+  '<div class="eh">Recipes (saved steps the AI can run by name)</div>'+
+  '<textarea id="recIn" rows="4" placeholder="Paste a recipe as JSON: a name and a list of steps"></textarea>'+
+  '<div class="r1"><button id="recSave">Save recipe</button></div>'+
+  Object.keys(R).map(n=>'<div class="kr"><span>'+esc(n)+'</span><button data-del="'+esc(n)+'">Delete</button></div>').join('')+
+  '<div class="eh">Checks</div><div class="r1"><button id="dvEnv">Run checks</button><button id="dvRun" class="pri">Check for code rot</button><button id="dvShk">Shooter check</button><button id="dvClr">Clear errors</button></div>'+
+  '<pre id="devChk" class="dvpre">Press a check.</pre><pre id="devErr" class="dvpre">'+esc(ERRS.slice(-8).join('\n')||'No errors yet.')+'</pre>';
+  ['bg2','panel','fg','ac'].forEach(k=>$('lk_'+k).oninput=e=>{const l=getStore('gvlook',{});l[k]=e.target.value;setStore('gvlook',l);applyLook(l)});
+  $('lk_font').onchange=e=>{const l=getStore('gvlook',{});l.font=e.target.value;setStore('gvlook',l);applyLook(l)};
+  $('lkReset').onclick=()=>{setStore('gvlook',{});document.documentElement.removeAttribute('style');document.body.style.fontFamily='';renderDev()};
+  $('dvSave').onclick=()=>{try{localStorage.setItem('gvai',$('devAI').value.trim())}catch(e){}$('devChk').textContent='AI rules saved. They apply to the next AI request.'};
+  $('dvAIclr').onclick=()=>{try{localStorage.removeItem('gvai')}catch(e){}$('devAI').value='';$('devChk').textContent='AI rules cleared.'};
+  $('recSave').onclick=()=>{let r;try{r=JSON.parse($('recIn').value)}catch(e){$('devChk').textContent='The recipe is not valid JSON.';return}
+    if(!r||typeof r.name!=='string'||!r.name.trim()||!Array.isArray(r.ops)){$('devChk').textContent='A recipe needs a name and an ops list.';return}
+    const bad=r.ops.filter(o=>!o||!OPS[o.op]||o.op==='recipe').map(o=>o&&o.op);
+    if(bad.length){$('devChk').textContent='Unknown or not allowed steps: '+bad.join(', ');return}
+    const all=getRec();all[r.name.trim()]=r.ops;setStore('gvrec',all);renderDev()};
+  $('dvp').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const all=getRec();delete all[b.dataset.del];setStore('gvrec',all);renderDev()});
+  $('bgF').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(f.size>40e6){$('devChk').textContent='That file is over 40 MB. Use a smaller clip.';return}
+    const b={blob:f,type:f.type};await kvPut('bg',b);applyBg(b);$('devChk').textContent='Background set. It is kept in this browser.'};
+  $('bgO').oninput=e=>{const l=getStore('gvlook',{});l.bgo=+e.target.value;setStore('gvlook',l);applyBgOpacity()};
+  $('bgClr').onclick=async()=>{await kvDel('bg');removeBg();$('devChk').textContent='Background removed.'};
+  $('dvEnv').onclick=()=>runChecks();
+  $('dvRun').onclick=()=>{$('devChk').textContent=healthCheck().join('\n')};
+  $('dvShk').onclick=()=>{if(!G){$('devChk').textContent='Load a gun first.';return}const c=liveCheck();$('devChk').textContent=checkLine(c)+'\n'+c.f.concat(c.w).map(i=>'- '+i.t+': '+i.d).join('\n')};
+  $('dvClr').onclick=()=>{ERRS.length=0;renderDev()}}
+$('dvb').onclick=()=>{const hidden=$('dvp').classList.toggle('hide');$('dvb').classList.toggle('on',!hidden);if(!hidden)renderDev()};
+// ----- controls: rebindable keys and mouse buttons, trackpad alternative -----
+const DEF={shoot:'Space',reload:'KeyR',aim:'KeyA'},BIND=Object.assign({},DEF);
+try{Object.assign(BIND,JSON.parse(localStorage.getItem('gvbinds')||'{}'))}catch(e){}
+for(const k in DEF)if(typeof BIND[k]!=='string')BIND[k]=DEF[k];
+const saveBind=()=>{try{localStorage.setItem('gvbinds',JSON.stringify(BIND))}catch(e){}};
+const BNAME=c=>c.startsWith('Mouse')?(['Left click','Middle click','Right click'][+c.slice(5)]||c):c.replace(/^Key|^Digit/,'');
+const mbtn=e=>e.button===0&&(e.altKey||e.metaKey)?2:e.button;
+const hitA=(a,e)=>{const c=BIND[a];return c.startsWith('Mouse')?e.type.startsWith('pointer')&&mbtn(e)===+c.slice(5):e.code===c};
+const actOk=a=>tab==='anim'||(tab==='edit'&&a==='shoot');
+function onDown(e){
+  if(capFor||!sel)return;
+  if(e.type==='keydown'){if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return}
+  else if(e.target!==cv)return;
+  for(const a of ['shoot','reload','aim']){
+    if(!hitA(a,e)||!actOk(a))continue;
+    if(e.type==='keydown'){if(e.repeat)return;e.preventDefault()}
+    if(a==='shoot'){holdFire=true;if(performance.now()>=nextShot&&rt<0)fire(performance.now())}
+    else if(a==='reload')reload();
+    else $('bA').click();
+    return;
+  }
+}
+function onUp(e){if(e.type==='keyup'?e.code===BIND.shoot:BIND.shoot.startsWith('Mouse'))holdFire=false}
+addEventListener('keydown',onDown);addEventListener('keyup',onUp);
+cv.addEventListener('pointerdown',onDown);addEventListener('pointerup',onUp);addEventListener('pointercancel',onUp);
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+let capFor=null;
+function startCap(a,b){capFor=a;b.textContent='Press a key or click…';b.classList.add('on')}
+function endCap(c){if(c!=null)BIND[capFor]=c;capFor=null;saveBind();renderEdp()}
+addEventListener('keydown',e=>{if(!capFor)return;e.preventDefault();e.stopImmediatePropagation();endCap(e.code==='Escape'?null:e.code)},true);
+addEventListener('pointerdown',e=>{if(!capFor)return;e.preventDefault();e.stopImmediatePropagation();endCap('Mouse'+mbtn(e))},true);
+function renderEdp(){
+  const row=(a,l)=>'<div class="kr"><span>'+l+'</span><button data-a="'+a+'">'+esc(BNAME(BIND[a]))+'</button></div>';
+  $('edp').innerHTML='<div class="eh">Controls</div>'+row('shoot','Shoot')+row('reload','Reload')+row('aim','Aim / scope')+
+    '<div class="hint">Click a control, then press a key or a mouse button. Esc cancels. Trackpad: Option/Alt-click or Cmd-click works as right-click.</div>'+
+    '<div class="r1"><button id="rk">Reset keys</button></div>'+
+    '<div id="attUI"></div>';
+  $('edp').querySelectorAll('button[data-a]').forEach(b=>b.onclick=()=>startCap(b.dataset.a,b));
+  $('rk').onclick=()=>{Object.assign(BIND,DEF);saveBind();renderEdp()};
+  renderAtt();
+}
+$('edb').onclick=()=>setTab(tab==='edit'?'view':'edit');
+renderEdp();
+syncAnim();rigReady=true;
+const padRO=new ResizeObserver(()=>{const v=['anp','aip'].map(i=>$(i)).find(e=>e.offsetParent!==null);stage.style.setProperty('--pb',v?(v.offsetHeight+20)+'px':'0px');rs()});padRO.observe($('anp'));padRO.observe($('aip'));
+// ----- skins, charms, attachments, geometry fixes -----
+const THEMES={halloween:{color:'#ff6a00',emissive:'#4a1090',ei:.18,metal:.1,rough:.65,charm:'pumpkin'},christmas:{color:'#c01820',emissive:'#0e7a2c',ei:.12,metal:.15,rough:.55,charm:'ornament'},
+ winter:{color:'#8fd0ff',emissive:'#2a7fff',ei:.12,metal:.25,rough:.4,charm:'star'},valentine:{color:'#ff3f88',emissive:'#ff1f6a',ei:.15,metal:.1,rough:.55,charm:'star'},
+ neon:{color:'#00b860',emissive:'#00ff9a',ei:.3,metal:.3,rough:.5},gold:{color:'#e0a400',metal:.9,rough:.3},bloodmoon:{color:'#7a0a12',emissive:'#ff1a1a',ei:.15,metal:.25,rough:.55,charm:'skull'}};
+function paint(o){const re=o.part?new RegExp(o.part,'i'):null;let n=0;
+  eachMesh(m=>{if(re&&!re.test(pname(m)+' '+[].concat(m.material).map(x=>x.name).join(' ')))return;n++;
+    const arr=[].concat(m.material).map(x=>re?x.clone():x);
+    arr.forEach(x=>{if(o.color){x.color.copy(lin(o.color));if(!o.keepTexture){x.map=null;x.userData.flat=true}}
+      if(o.emissive!==undefined){x.emissive.copy(lin(o.emissive));x.emissiveIntensity=o.ei===undefined?.4:o.ei}
+      if(o.metal!==undefined)x.metalness=o.metal;if(o.rough!==undefined)x.roughness=o.rough;x.needsUpdate=true});
+    m.material=arr.length>1?arr:arr[0]});return n}
+const mk=(c,e)=>new THREE.MeshStandardMaterial({color:lin(c),roughness:.5,metalness:.15,emissive:lin(e||0),emissiveIntensity:.3});
+function charm(type){const A=G.add,old=A.getObjectByName('charm');if(old)A.remove(old);if(!type||type==='none')return;
+  const g=new THREE.Group();g.name='charm';const s=G.len*.035,add=(geo,mat,x,y,z,sc)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);if(sc)m.scale.set(sc[0],sc[1],sc[2]);g.add(m)};
+  add(new THREE.CylinderGeometry(s*.03,s*.03,s*1.2,6),mk(0x222222),0,s*.6,0);
+  if(type==='pumpkin'){add(new THREE.SphereGeometry(s,16,12),mk(0xff7a1a,0x552200),0,-s*.2,0,[1,.82,1]);add(new THREE.CylinderGeometry(s*.12,s*.16,s*.35,6),mk(0x2f7d32),0,s*.55,0)}
+  else if(type==='ornament'){add(new THREE.SphereGeometry(s,16,12),mk(0xd8232a,0x300000),0,-s*.2,0);add(new THREE.CylinderGeometry(s*.3,s*.3,s*.25,10),mk(0xe8c14a),0,s*.8,0)}
+  else if(type==='skull'){add(new THREE.SphereGeometry(s,16,12),mk(0xeeeeee),0,-s*.2,0);[-.35,.35].forEach(x=>add(new THREE.SphereGeometry(s*.22,8,8),mk(0x000000),x*s,-s*.1,s*.85))}
+  else add(new THREE.OctahedronGeometry(s),mk(0xffd24a,0x553300),0,-s*.2,0,[1,1.4,.5]);
+  g.position.copy(G.ctr).addScaledVector(G.dir,-G.len*.3).addScaledVector(G.upv,-G.sz[G.up]*.42);A.add(g)}
+function attach(kind,o){const A=G.add,{dir,upv,len,sz,ax,up}=G,sd=['x','y','z'].find(a=>a!==ax&&a!==up),old=A.getObjectByName('a_'+kind);if(old)A.remove(old);
+  const M=(c,e)=>new THREE.MeshStandardMaterial({color:lin(c),metalness:.7,roughness:.35,emissive:lin(e||0),emissiveIntensity:e?1:0}),Q=v=>new THREE.Quaternion().setFromUnitVectors(AXV.y,v);
+  const box=(a,b,c)=>{const s=V3(0,0,0);s[ax]=a;s[up]=b;s[sd]=c;return new THREE.BoxGeometry(s.x,s.y,s.z)};let m=new THREE.Group();m.name='a_'+kind;
+  const top=G.ctr.clone().addScaledVector(upv,sz[up]/2);
+  if(kind==='scope'){const t=new THREE.Mesh(new THREE.CylinderGeometry(len*.016,len*.016,len*.16,16),M(0x15171a));t.quaternion.copy(Q(dir));m.add(t);
+    const ln=new THREE.Mesh(new THREE.CircleGeometry(len*.013,16),new THREE.MeshBasicMaterial({color:0x44d0ff}));ln.position.copy(dir).multiplyScalar(len*.081);ln.quaternion.setFromUnitVectors(AXV.z,dir);m.add(ln);m.position.copy(top).addScaledVector(upv,len*.022)}
+  else if(kind==='redDot'){m.add(new THREE.Mesh(box(len*.05,len*.03,len*.025),M(0x15171a)));const d=new THREE.Mesh(box(len*.004,len*.004,len*.004),M(0x000000,0xff2222));d.position.copy(dir).multiplyScalar(len*.026);m.add(d);m.position.copy(top).addScaledVector(upv,len*.015)}
+  else if(kind==='suppressor'){const t=new THREE.Mesh(new THREE.CylinderGeometry(len*.02,len*.02,len*.2,16),M(0x15171a));t.quaternion.copy(Q(dir));m.add(t);m.position.copy(G.muzzle).addScaledVector(dir,len*.1)}
+  else{const t=new THREE.Mesh(box(len*.7,len*.01,len*.004),M(0x000000,new THREE.Color(o.color||'#a040ff')));m.add(t);m.position.copy(G.ctr);m.position[sd]+=sz[sd]/2+len*.003}
+  A.add(m)}
+function cleanG(g,dup){const pos=g.attributes.position,ix=g.index,tc=ix?ix.count/3:pos.count/3,keep=[],seen=new Set(),a=V3(0,0,0),b=V3(0,0,0),c=V3(0,0,0),n=V3(0,0,0);let rm=0;
+  const rd=v=>Math.round(v.x*1000)+','+Math.round(v.y*1000)+','+Math.round(v.z*1000);
+  for(let t=0;t<tc;t++){const i=[0,1,2].map(k=>ix?ix.getX(t*3+k):t*3+k);a.fromBufferAttribute(pos,i[0]);b.fromBufferAttribute(pos,i[1]);c.fromBufferAttribute(pos,i[2]);
+    n.crossVectors(b.clone().sub(a),c.clone().sub(a));if(!(n.length()>1e-10)){rm++;continue}
+    if(dup){const k=[rd(a),rd(b),rd(c)].sort().join('|');if(seen.has(k)){rm++;continue}seen.add(k)}keep.push(i[0],i[1],i[2])}
+  if(rm)g.setIndex(keep);return rm}
+function flipG(g){let ix=g.index;if(!ix){const n=g.attributes.position.count,a=new Uint32Array(n);for(let i=0;i<n;i++)a[i]=i;ix=new THREE.BufferAttribute(a,1);g.setIndex(ix)}
+  for(let i=0;i<ix.count;i+=3){const t=ix.getX(i+1);ix.setX(i+1,ix.getX(i+2));ix.setX(i+2,t)}ix.needsUpdate=true;
+  const n=g.attributes.normal;if(n){for(let i=0;i<n.array.length;i++)n.array[i]*=-1;n.needsUpdate=true}}
+const clampS=(k,v)=>{const s=SL.find(x=>x[0]===k);return Math.min(s[3],Math.max(s[2],+v))};
+const rescale=f=>{both(x=>{x.scale.multiplyScalar(f);x.position.multiplyScalar(f)});recenter();setupGun(G.obj)};
+const OPS={
+ scale:o=>{if(!(o.factor>0))throw Error('bad factor');rescale(o.factor);return 'Scaled the gun by '+o.factor},
+ scaleToLength:o=>{if(!(o.length>0))throw Error('bad length');rescale(o.length/G.len);return 'Resized the gun to '+o.length+' long'},
+ setPivot:o=>{const c=G.ctr,w=o.where,pts={center:c,grip:c.clone().addScaledVector(G.dir,-G.len*.12).addScaledVector(G.upv,-G.sz[G.up]*.3),rear:G.ends[1-G.me],muzzle:G.muzzle,bottom:c.clone().addScaledVector(G.upv,-G.sz[G.up]/2)};
+  if(!pts[w])throw Error('unknown pivot '+w);both(x=>x.position.sub(pts[w]));setupGun(G.obj,true);return 'Moved the pivot to the '+w+(w==='grip'?' (estimated)':'')},
+ orient:o=>{const t=V3(0,0,0),s=String(o.muzzleAxis||'+z');t[s[1]]=s[0]==='-'?-1:1;const q=new THREE.Quaternion().setFromUnitVectors(G.dir,t);
+  both(x=>{x.quaternion.premultiply(q);x.position.applyQuaternion(q)});recenter();setupGun(G.obj);return 'Turned the muzzle to face '+s},
+ fixGeometry:o=>{const w=o.what||['degenerate','duplicates'];let rm=0,fp=0;eachMesh(m=>{const g=m.geometry;if(w.includes('flip')){flipG(g);fp++}
+  if(w.includes('degenerate')||w.includes('duplicates'))rm+=cleanG(g,w.includes('duplicates'));if(w.includes('normals')&&!g.attributes.normal)g.computeVertexNormals()});
+  return 'Geometry: removed '+rm+' bad face'+(rm===1?'':'s')+(fp?', flipped faces on '+fp+' part(s)':'')},
+ theme:o=>{const t=THEMES[o.name];if(!t)throw Error('unknown skin '+o.name);paint({color:t.color,emissive:t.emissive||'#000000',ei:t.ei||0,metal:t.metal,rough:t.rough});charm(t.charm||'none');return 'Applied the '+o.name+' skin'+(t.charm?' with a '+t.charm+' charm':'')},
+ paint:o=>{const n=paint(o);return n?'Painted '+n+' part(s)':'No part matched that name'},
+ charm:o=>{charm(o.type);return o.type==='none'?'Removed the charm':'Added a '+o.type+' charm'},
+ attach:o=>{attach(o.kind,o);return 'Added a '+o.kind},
+ recipe:o=>{const r=getRec()[o.name];if(!r)throw Error('no recipe named "'+o.name+'"');return 'Ran '+o.name+': '+runOps(r.filter(x=>x.op!=='recipe')).join('; ')},
+ attachPart:o=>{const SL=Object.keys(PARTS);if(!SL.includes(o.slot))throw Error('unknown slot "'+o.slot+'"');if(!PARTS[o.slot][o.part])throw Error('"'+o.part+'" does not fit the '+o.slot+' slot');
+   const n=(v,lo,hi)=>Math.min(hi,Math.max(lo,+v||0));
+   ATT[o.slot]={type:o.part,ox:n(o.ox,-.5,.5),oy:n(o.oy,-.5,.5),oz:n(o.oz,-.5,.5),rx:n(o.rx,-180,180),ry:n(o.ry,-180,180),rz:n(o.rz,-180,180)};
+   rebuildAtt();renderAtt();return 'Attached '+PARTS[o.slot][o.part]+' to the '+o.slot},
+ detachPart:o=>{if(!PARTS[o.slot])throw Error('unknown slot "'+o.slot+'"');ATT[o.slot]=null;rebuildAtt();renderAtt();return 'Removed the '+o.slot+' part'},
+ camo:o=>{const k=o.name==='none'?'':o.name;if(k&&!CAMO[k])throw Error('unknown camo "'+k+'"');applyCamo(k);$('camo').value=k;return k?'Applied '+k+' camo':'Removed camo'},
+ anim:o=>{['rpm','recoil','mag','reload','fov'].forEach(k=>{if(o[k]!==undefined)P[k]=clampS(k,o[k])});if(o.scope)P.scope=o.scope;ammo=P.mag;syncAnim();return 'Tuned the animation settings'},
+ mergeMaterials:()=>{refreshMats();const u=[...new Set(mats)];if(u.length<2)return 'Already one material';if(u.some(m=>m.map!==u[0].map))return 'Skipped merge: parts use different textures';eachMesh(m=>m.material=u[0]);refreshMats();return 'Merged '+u.length+' materials into 1'},
+ removePart:o=>{const re=new RegExp(o.match,'i'),rm=[],tr=m=>{const g=m.geometry;return g.index?g.index.count/3:g.attributes.position.count/3};let tot=0,gone=0;eachMesh(m=>{tot+=tr(m);if(re.test(pname(m))){rm.push(m);gone+=tr(m)}});
+  if(!rm.length)return 'No part matched "'+o.match+'"';if(gone>tot*.3)return 'Refused: "'+o.match+'" is a big piece of the gun ('+Math.round(gone/tot*100)+'% of it), so I left it alone';rm.forEach(m=>m.parent.remove(m));setupGun(G.obj,true);return 'Removed '+rm.length+' part(s) matching "'+o.match+'"'}
+};
+function runOps(ops){if(!G)return['No gun loaded'];const out=[];for(const o of ops||[]){try{const f=OPS[o.op];out.push(f?f(o):'Skipped an unknown step ("'+o.op+'")')}catch(x){out.push('Could not do "'+o.op+'": '+x.message)}}refreshMats();return out}
+// ----- AI studio -----
+const KNOW=`You are the AI inside a 3D gun editor for a game developer making first person shooter (FPS) weapons, including custom event guns (Halloween, Christmas and other holidays). You are an expert technical artist and weapon-asset engineer, and you know FPS weapon design well: how guns are built, how viewmodels are set up, and what makes a weapon feel good to play.
+SCOPE: You only help with fictional in-game assets. Never give real-world instructions for making, modifying, converting or concealing real firearms (for example full-auto conversion, real suppressor manufacture, untraceable guns, ammunition or reloading data). If asked, decline in one short sentence and offer the in-game equivalent.
+YOU CANNOT SEE THE SCREEN. Judge placement from GUN CONTEXT: size (x,y,z), longAxis, upAxis, muzzleDirection, and parts.
+FPS-READY RULES: scale in meters (assault rifle ~0.9 long, SMG ~0.5-0.6, pistol ~0.2, shotgun ~1.0, sniper ~1.2, LMG ~1.0); muzzle points along +Z (Unity/glTF forward); pivot at the grip/hand position; 10k-40k triangles for a viewmodel; 1 to 3 materials; 2048px textures; normals outward; no zero-area or duplicate faces; UVs inside 0-1; separate bolt/slide and magazine parts so reload and fire animations work; sights at a consistent height so aim-down-sights lines up; skins must keep the silhouette readable.
+HOW TO FIX: "Probably centimeters" or odd size -> scaleToLength with a realistic length. Pivot far away -> setPivot grip. Facing the wrong way -> orient. Zero-area or duplicate faces -> fixGeometry. Inside-out faces -> fixGeometry with flip. Junk parts (loose bullets, helper boxes) -> removePart only when clearly not part of the gun. Things you cannot fix by editing (huge textures, missing UVs, missing parts): say so plainly.
+ATTACHMENTS: five slots, each takes one part or none. Anchors: muzzle = barrel tip; sight and scope = top centre of the receiver; grip = underside; stock = rear end. Parts: muzzle slot: brake (flash-reducing muzzle brake), suppressor. grip slot: vgrip. stock slot: fixed. sight slot: dot (red dot). scope slot: s1 (1x ring scope), s4 (4x scope), s8 (8x sniper scope). Place with attachPart: ox = along the barrel (positive toward the muzzle), oy = up, oz = side, as fractions of gun length (0.02 = 2 percent of length); rx, ry, rz = tilt in degrees. A scope usually starts at oy 0 with no tilt; a grip usually starts at ox 0 to 0.1 of length back from the centre. Use detachPart to remove a slot. Suppressor in the muzzle slot also makes the gun quieter in play.
+CAMO: camo op with name galaxy, gold, lava, ice, or none. Pick the camo that fits the request, and say why.
+EVENT GUNS: use theme (halloween, christmas, winter, valentine, neon, gold, bloodmoon) or your own paint hex colors and emissive glow, plus charm (pumpkin, ornament, skull, star). Pick colors that suit the event and the gun, and combine steps freely.
+CONTROLS: players rebind keys in the Controls panel. You may explain the controls, but you cannot change them.
+ANIMATION: tune fire rate (rpm), recoil, magazine, reload seconds, scope style (ring = Valorant-style ring and dot, dot, cross, sniper, none) and zoom (fov: lower is more zoom). Fast guns: high rpm, low recoil. Heavy guns: low rpm, high recoil, slow reload.
+ALLOWED STEPS (use only these, in a sensible order, only what the user needs):
+{"op":"scale","factor":n} {"op":"scaleToLength","length":n} {"op":"setPivot","where":"center|grip|rear|muzzle|bottom"} {"op":"orient","muzzleAxis":"+z|-z|+x|-x|+y|-y"} {"op":"fixGeometry","what":["degenerate","duplicates","flip","normals"]} {"op":"theme","name":"halloween"} {"op":"paint","part":"optional regex","color":"#hex","emissive":"#hex","ei":0-1,"metal":0-1,"rough":0-1,"keepTexture":false} {"op":"charm","type":"pumpkin|ornament|skull|star|none"} {"op":"attachPart","slot":"muzzle|grip|stock|sight|scope","part":"brake|suppressor|vgrip|fixed|dot|s1|s4|s8","ox":n,"oy":n,"oz":n,"rx":n,"ry":n,"rz":n} {"op":"detachPart","slot":"muzzle|grip|stock|sight|scope"} {"op":"camo","name":"galaxy|gold|lava|ice|none"} {"op":"anim","rpm":n,"recoil":n,"mag":n,"reload":n,"scope":"ring","fov":n} {"op":"removePart","match":"regex"}
+Be honest: if the user asks for something these steps cannot do (sculpting new geometry, painting a texture from a picture), say so, then do the closest useful thing.
+REPLY FORMAT: ONLY one JSON object, no markdown: {"reply":"2-4 short friendly sentences saying what you changed and why, in plain words","ops":[...]}`;
+function liveCheck(){const it=analyze(G.obj,{},'live'),f=it.filter(i=>i.s==='fail'),w=it.filter(i=>i.s==='warn');return{verdict:f.length?'NOT READY':'READY',f,w}}
+const checkLine=c=>'Shooter check on this version: '+c.verdict+(c.f.length?' - '+c.f.map(i=>i.t).join(', '):'')+(c.w.length?' ('+c.w.length+' tip'+(c.w.length>1?'s':'')+')':'');
+function describe(){const parts=[];eachMesh(m=>{const g=m.geometry;parts.push({name:m.name||(m.parent&&m.parent.name)||'mesh',tris:Math.round(g.index?g.index.count/3:g.attributes.position.count/3),material:[].concat(m.material).map(x=>x.name||'mat').join('+'),hasUV:!!g.attributes.uv})});
+  const c=liveCheck();return{gun:sel.mn,longAxis:G.ax,upAxis:G.up,size:G.sz.toArray().map(v=>+v.toFixed(3)),muzzleDirection:G.dir.toArray(),parts:parts.slice(0,30),materialCount:new Set(mats).size,hasBoltPart:!!G.bolt.length,hasMagPart:!!G.mag.length,animation:P,recipes:Object.keys(getRec()),clips:CLIPS.map(c=>c.name||''),attachments:Object.fromEntries(Object.entries(ATT).filter(([k,v])=>v&&v.type)),camo:camoK||'none',controls:BIND,editsAlreadyApplied:opsLog.flat().map(o=>o.op),currentShooterCheck:{verdict:c.verdict,problems:c.f.map(i=>i.t+': '+i.d),tips:c.w.map(i=>i.t+': '+i.d)}}}
+const alog=$('alog');
+function addMsg(r,t,list){const d=document.createElement('div');d.className='msg '+r;d.textContent=t;if(list&&list.length){const u=document.createElement('ul');list.forEach(x=>{const li=document.createElement('li');li.textContent=x;u.appendChild(li)});d.appendChild(u)}alog.appendChild(d);alog.scrollTop=alog.scrollHeight}
+function setBusy(b,txt){busy=b;$('abusy').classList.toggle('hide',!b);if(txt)$('abt').textContent=txt;$('ain').disabled=b;$('asend').disabled=b;alog.scrollTop=alog.scrollHeight}
+const greet=()=>addMsg('ai','Tell me what you want for this gun. I can fix problems, resize it, move the pivot, paint event skins, add scopes and charms, and tune the shooting, reload and aim animations. Then I run the shooter check on the new version.');
+async function ask(text){
+  text=text.trim();if(!text||busy||!G)return;addMsg('me',text);$('ain').value='';setBusy(true,'Making new feature…');
+  try{let sm=null;try{sm=window.claude&&await window.claude.use('sample')}catch(e){}
+    if(!sm){addMsg('ai','The AI runs only when this page is published as a Claude artifact with the sample capability allowed. Publish it, open the link, and allow access when asked. The skin buttons work here without it.');return}
+    const prompt=modelBlock()+'\n\nRECIPE STEP: {\"op\":\"recipe\",\"name\":\"<a name from GUN CONTEXT recipes>\"} runs a saved sequence.'+(extraAI()?'\n\nDEVELOPER NOTES (follow these too):\n'+extraAI():'')+'\n\nGUN CONTEXT (json):\n'+JSON.stringify(describe())+'\n\nCONVERSATION SO FAR:\n'+aiHist.slice(-6).map(h=>h.r+': '+h.t).join('\n')+'\n\nUSER REQUEST:\n'+text;
+    const r=await sm(prompt,smOpts(curModel())),t=r.text||'',j=JSON.parse(t.slice(t.indexOf('{'),t.lastIndexOf('}')+1));
+    aiHist.push({r:'user',t:text},{r:'you',t:j.reply||''});
+    const ops=Array.isArray(j.ops)?j.ops:[];let res=[];if(ops.length){opsLog.push(ops);res=runOps(ops)}
+    const fix=await selfFix(sm);addMsg('ai',j.reply||'Done.',res.concat(fix,[checkLine(liveCheck())]));
+  }catch(x){console.error(x);addMsg('ai',x&&x.code==='rate_limited'?'Too many requests right now. Wait a moment and try again.':x&&x.code==='not_granted'?'Claude access was not allowed for this page, so the AI cannot run. You can allow it in the page permissions.':'Something went wrong making that change ('+((x&&x.message)||x)+'). Nothing was broken. Try asking a different way.')}
+  finally{setBusy(false)}}
+async function rebuild(txt){setBusy(true,txt);try{await showModel();for(const b of opsLog)runOps(b)}finally{setBusy(false)}}
+$('asend').onclick=()=>ask($('ain').value);
+$('ain').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask($('ain').value)}});
+$('chips').innerHTML=['Fix everything the shooter check found','Make it a Halloween gun','Make it a Christmas gun','Add a scope and a silencer','Tune it as a fast SMG-style gun'].map(t=>'<button>'+t+'</button>').join('');
+$('chips').querySelectorAll('button').forEach(b=>b.onclick=()=>ask(b.textContent));
+$('skins').innerHTML='<span>Quick skins:</span>'+Object.keys(THEMES).map(k=>'<button data-k="'+k+'">'+k+'</button>').join('');
+$('skins').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(!G||busy)return;const o=[{op:'theme',name:b.dataset.k}];opsLog.push(o);addMsg('ai',runOps(o)[0]+'.',[checkLine(liveCheck())])});
+$('aund').onclick=()=>{if(!opsLog.length||busy)return;opsLog.pop();rebuild('Undoing…').then(()=>addMsg('ai','Undid the last change.'))};
+$('arst').onclick=()=>{if(busy||!G)return;opsLog=[];rebuild('Resetting…').then(()=>addMsg('ai','Back to the original gun.'))};
+$('achk').onclick=()=>{if(!G)return;const c=liveCheck();addMsg('ai',checkLine(c),c.f.concat(c.w).map(i=>i.t+': '+i.d))};
+function packORM(m){const a=m.aoMap,r=m.roughnessMap,t=m.metalnessMap;if(!r||!t||r===t)return;const S=1024,px=x=>{if(!x||!x.image)return null;const c=document.createElement('canvas');c.width=c.height=S;const g=c.getContext('2d');g.drawImage(x.image,0,0,S,S);return g.getImageData(0,0,S,S).data};
+  const A=px(a),Rr=px(r),T=px(t),c=document.createElement('canvas');c.width=c.height=S;const g=c.getContext('2d'),d=g.createImageData(S,S);
+  for(let i=0;i<S*S*4;i+=4){d.data[i]=A?A[i]:255;d.data[i+1]=Rr[i];d.data[i+2]=T[i];d.data[i+3]=255}g.putImageData(d,0,0);
+  const tx=new THREE.CanvasTexture(c);tx.flipY=r.flipY;m.roughnessMap=m.metalnessMap=tx;if(A)m.aoMap=tx;m.needsUpdate=true}
+function glb(){return new Promise((ok,no)=>{const w=console.warn;try{console.warn=()=>{};eachMesh(m=>[].concat(m.material).forEach(packORM));cur.position.set(0,0,0);cur.quaternion.identity();cur.updateMatrixWorld(true);new THREE.GLTFExporter().parse(cur,b=>{console.warn=w;ok(b)},{binary:true,maxTextureSize:2048,animations:CLIPS})}catch(x){console.warn=w;no(x)}})}
+$('asave').onclick=async()=>{if(!G||busy)return;setBusy(true,'Saving…');try{const buf=await glb(),name=sel.mn.replace(/\.[a-z0-9]+$/i,'')+' (edited).glb',e={id:Date.now()+'-'+Math.random().toString(36).slice(2,6),name:'Edited: '+sel.mn,added:Date.now(),files:[new File([buf],name)],checks:{}};
+  lib.push(e);const ok=await put(e);renderLib();setBusy(false);await pick(e.id,name);addMsg('ai','Saved as a new gun in your library'+(ok?'.':', but this browser would not keep it for next time.'))}catch(x){console.error(x);setBusy(false);addMsg('ai','Could not save: '+((x&&x.message)||x))}};
+$('adl').onclick=async()=>{if(!G||busy)return;try{const d=window.claude&&await window.claude.use('downloads');if(!d){addMsg('ai','Downloading is not available here. Use Save as new gun to keep it in your library.');return}
+  const buf=await glb();await d.save({filename:sel.mn.replace(/\.[a-z0-9]+$/i,'')+' (edited).glb',data:new Blob([buf])});addMsg('ai','Download sent.')}catch(x){addMsg('ai',x&&x.code==='declined'?'Download cancelled.':'Could not download ('+((x&&x.message)||x)+'). Use Save as new gun instead.')}};
+
+// ---------- wiring ----------
+$('f').onchange=ev=>{if(ev.target.files.length)addFiles(ev.target.files);ev.target.value=''};
+$('tg').onclick=()=>$('side').classList.toggle('closed');
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
+document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>view(b.dataset.v));
+$('spin').onclick=()=>{ctl.autoRotate=!ctl.autoRotate;$('spin').classList.toggle('on',ctl.autoRotate)};
+$('wire').onclick=()=>{wireOn=!wireOn;mats.forEach(m=>m.wireframe=wireOn);$('wire').classList.toggle('on',wireOn)};
+addEventListener('dragover',ev=>{ev.preventDefault();$('empty').classList.add('hv')});
+addEventListener('dragleave',()=>$('empty').classList.remove('hv'));
+addEventListener('drop',ev=>{ev.preventDefault();$('empty').classList.remove('hv');if(ev.dataTransfer.files.length)addFiles(ev.dataTransfer.files)});
+const mq=matchMedia('(max-width:700px)');$('side').classList.toggle('closed',mq.matches);mq.addEventListener('change',e=>$('side').classList.toggle('closed',e.matches));
+try{refreshModelUI()}catch(err){console.error(err)}
+(async()=>{db=await idb();
+  if(db){try{const all=await new Promise(res=>{const q=db.transaction('pkgs').objectStore('pkgs').getAll();q.onsuccess=()=>res(q.result||[]);q.onerror=()=>res([])});
+    lib=all.sort((a,b)=>a.added-b.added).map(x=>({id:x.id,name:x.name,added:x.added,checks:x.checks||{},files:x.files.map(f=>new File([f.b],f.n))}))}catch(x){}}
+  [refreshModelUI,renderLib,updateEmpty,rs,migrateRules].forEach(f=>{try{f()}catch(err){console.error(err)}});if(db)kvGet('bg').then(b=>{if(b&&b.blob)applyBg(b)});
+  if(lib.length){const e=lib[lib.length-1];await pick(e.id,nice(modelsOf(e)[0].name))}})();
+</script></body></html>
